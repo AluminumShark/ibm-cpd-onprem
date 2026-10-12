@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import ssl
 import sys
 import urllib.request
@@ -115,17 +116,19 @@ def get(key: str, cfg: dict | None = None, default=None):
     """Resolve one setting: env var > config file > default."""
     if cfg is None:
         cfg = load_file()
+    if key == "verify_ssl":
+        # Checked ahead of the file on purpose: cpd_init.py always writes this
+        # key, so consulting the file first made CPD_VERIFY_SSL permanently dead
+        # for anyone who had run the wizard.
+        ev = os.environ.get("CPD_VERIFY_SSL")
+        if ev is not None:
+            return ev not in ("0", "false", "False", "")
+        return bool(cfg.get("verify_ssl", False))
     env_name = ENV.get(key)
     if env_name and os.environ.get(env_name):
         return os.environ[env_name]
     if key in cfg and cfg[key] not in (None, ""):
         return cfg[key]
-    if key == "verify_ssl":
-        # env override CPD_VERIFY_SSL=1/0, else config, else False (self-signed)
-        ev = os.environ.get("CPD_VERIFY_SSL")
-        if ev is not None:
-            return ev not in ("0", "false", "False", "")
-        return bool(cfg.get("verify_ssl", False))
     return default
 
 
@@ -159,10 +162,15 @@ def http(method: str, path_or_url: str, token: str | None = None, body=None,
     try:
         with urllib.request.urlopen(req, context=_ctx(verify), timeout=180) as r:
             raw = r.read().decode("utf-8")
-    except urllib.error.HTTPError as e:
+            status = getattr(r, "status", None) or r.getcode()
+    except urllib.error.HTTPError as e:  # must precede URLError, it subclasses it
         raw = e.read().decode("utf-8", "ignore")
         return e.code, _maybe_json(raw)
-    return 200, _maybe_json(raw)
+    except (urllib.error.URLError, socket.timeout, TimeoutError) as e:
+        sys.exit("cannot reach %s: %s\n"
+                 "  check the cluster URL, your network or VPN, and whether the "
+                 "cluster is up." % (url, getattr(e, "reason", e) or e))
+    return status, _maybe_json(raw)
 
 
 def _maybe_json(s: str):
@@ -237,8 +245,17 @@ def main(argv):
         print(json.dumps(out, ensure_ascii=False, indent=2))
     elif cmd == "get":
         if len(argv) < 2:
-            sys.exit("usage: cpd_config.py get <key>")
-        v = get(argv[1], cfg)
+            sys.exit("usage: cpd_config.py get <key> [--reveal]")
+        key = argv[1]
+        if key == "api_key" and "--reveal" not in argv[2:]:
+            sys.stderr.write(
+                "refusing to print the API key: `get` is meant for $(...) in "
+                "shell scripts, where the value lands in history, logs and agent "
+                "transcripts.\n"
+                "  pass --reveal if you really mean it; scripts should read "
+                "$CPD_API_KEY or call get_token() instead.\n")
+            return 2
+        v = get(key, cfg)
         print(v if v is not None else "")
     elif cmd == "token":
         print(get_token(cfg))

@@ -53,11 +53,48 @@ def choose(label, items, render, current=None):
         print("  invalid choice")
 
 
+def api_key_to_store(entered: str, existing_key: str, store_key: bool) -> str:
+    """What belongs in the config's api_key field after a wizard run.
+
+    The prompt offers "blank keeps current", so a blank entry must never wipe a
+    key that is already stored — that silently logs the user out of their own
+    cluster on the next run.
+    """
+    if entered:
+        return entered if store_key else ""
+    return existing_key or ""
+
+
+def keep_deployment(old_dep: str, deps_in_space: list) -> str:
+    """Keep a previously configured deployment only if the chosen space has it.
+
+    Skipping the picker used to carry the old id across a space switch, which
+    produces a config that authenticates fine and then 404s on every chat.
+    """
+    if not old_dep:
+        return ""
+    ids = {d.get("metadata", {}).get("id") for d in deps_in_space}
+    return old_dep if old_dep in ids else ""
+
+
+def carry_over(existing: dict, url: str) -> dict:
+    """Drop resource ids when the cluster URL changes; they are cluster-scoped."""
+    previous = (existing.get("url") or "").rstrip("/")
+    if previous and previous != (url or "").rstrip("/"):
+        return {k: v for k, v in existing.items()
+                if k not in ("space_id", "project_id", "deployment_id",
+                             "wxo_instance_url")}
+    return existing
+
+
 def main():
     print("=== IBM Cloud Pak for Data — connection setup ===\n")
     existing = C.load_file()
 
     url = ask("Cluster URL", existing.get("url") or os.environ.get("CPD_URL"))
+    existing = carry_over(existing, url)   # a new cluster invalidates old ids
+    stored_key = existing.get("api_key", "")
+
     username = ask("Username", existing.get("username")
                    or os.environ.get("CPD_USERNAME"))
     key_hint = "(blank keeps current / uses CPD_API_KEY)" if (
@@ -101,6 +138,7 @@ def main():
             state = e.get("status", {}).get("state", "")
             return (d["metadata"]["id"],
                     f'{e.get("name")}  [{model} / {state}]  ({d["metadata"]["id"]})')
+        deployment_id = keep_deployment(deployment_id, deps)
         chosen_dep = choose("deployment", deps, dep_render, current=deployment_id)
         if chosen_dep:
             deployment_id = chosen_dep["metadata"]["id"]
@@ -129,7 +167,7 @@ def main():
                    f"/orchestrate/cpd-instance-operands/instances/{chosen_wxo['id']}")
 
     # ---- store api key? --------------------------------------------------
-    store_key = False
+    store_key = bool(stored_key)   # already stored -> keep storing by default
     if api_key:
         store_key = ask("Store the API key in the config file? (y/N — N = use "
                         "CPD_API_KEY env var)", "N").lower().startswith("y")
@@ -137,7 +175,7 @@ def main():
     out = {
         "url": url,
         "username": username,
-        "api_key": api_key if (api_key and store_key) else "",
+        "api_key": api_key_to_store(api_key, stored_key, store_key),
         "verify_ssl": verify,
         "space_id": space_id,
         "project_id": project_id,

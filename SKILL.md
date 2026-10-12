@@ -87,7 +87,7 @@ then `~/.config/cpd-onprem/config.json`. `show` names the one actually read, so
 when a value looks stale, check that line before assuming the cluster is wrong.
 
 Quick checks: `python scripts/cpd_config.py show` (resolved settings, key masked),
-`python scripts/cpd_config.py token` (a bearer token).
+`python scripts/cpd_config.py token` (a bearer token). `get api_key` is refused without `--reveal`, so it cannot land in a transcript by accident.
 
 ## Two gotchas that bite on EVERY path
 
