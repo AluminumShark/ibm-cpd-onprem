@@ -77,7 +77,8 @@ there is never a question of which one won.
 | default project | `CPD_PROJECT_ID` | |
 | default deployment | `CPD_DEPLOYMENT_ID` | auto-discovered if unset |
 | WXO instance URL | `CPD_WXO_INSTANCE_URL` | for the ADK |
-| verify TLS | `CPD_VERIFY_SSL` | default off (self-signed) |
+| verify TLS | `CPD_VERIFY_SSL` | default off (self-signed); a warning is printed while off |
+| CA bundle | `CPD_CA_BUNDLE` | PEM to verify against, for a cluster with a private CA |
 
 **Signing in to the web console** (where you generate the API key): on a cluster
 fronted by OpenShift, the login page asks for an identity provider first. Pick
@@ -198,6 +199,24 @@ ibm-cpd-onprem/
     ├── wx_chat.sh        # one-shot chat
     └── wx_connect.py     # SDK read-only inventory
 ```
+
+## Verified against
+
+Everything here was exercised end to end against a live cluster, not inferred
+from docs. Other versions probably work; these are the ones actually tested.
+
+| Component | Tested |
+|---|---|
+| IBM Cloud Pak for Data backend | 5.3 |
+| `ibm-watsonx-ai` SDK | 1.3.39 (sends `version=5.2`, see below) |
+| `ibm-watsonx-orchestrate` ADK | 1.12.0 |
+| Python | 3.8.20 and 3.13.7 (unit tests pass on both) |
+| Chat deployment | `openai/gpt-oss-120b` |
+
+The SDK validates the product version against a built-in list and rejects a
+backend newer than itself, so `wx_connect.py` falls back to the highest version
+the installed SDK accepts and says so on stderr. Its read-only calls are
+unaffected by that gap; do not assume the same for other APIs.
 
 ## Tests
 

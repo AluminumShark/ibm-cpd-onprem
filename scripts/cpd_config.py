@@ -51,6 +51,7 @@ ENV = {
     "project_id": "CPD_PROJECT_ID",
     "deployment_id": "CPD_DEPLOYMENT_ID",
     "wxo_instance_url": "CPD_WXO_INSTANCE_URL",
+    "ca_bundle": "CPD_CA_BUNDLE",
 }
 
 _warned = set()
@@ -132,12 +133,27 @@ def get(key: str, cfg: dict | None = None, default=None):
     return default
 
 
-def _ctx(verify: bool) -> ssl.SSLContext:
-    ctx = ssl.create_default_context()
+def _ctx(verify, cfg: dict | None = None) -> ssl.SSLContext:
+    """TLS context. Verification stays off by default because on-prem CPD is
+    almost always self-signed, but say so out loud, and honour a CA bundle when
+    one is configured so a properly-certified cluster can be verified."""
     if not verify:
+        _warn_once("tls", "[warn] TLS verification is OFF (self-signed default). "
+                          "Set CPD_VERIFY_SSL=1, with CPD_CA_BUNDLE if the "
+                          "cluster uses a private CA.\n")
+        ctx = ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
-    return ctx
+        return ctx
+    bundle = get("ca_bundle", cfg)
+    if not bundle:
+        return ssl.create_default_context()
+    if not os.path.isfile(bundle):
+        sys.exit("CPD_CA_BUNDLE points at %s, which is not a file." % bundle)
+    try:
+        return ssl.create_default_context(cafile=bundle)
+    except ssl.SSLError as e:
+        sys.exit("cannot load the CA bundle %s: %s" % (bundle, e))
 
 
 def http(method: str, path_or_url: str, token: str | None = None, body=None,
@@ -160,7 +176,7 @@ def http(method: str, path_or_url: str, token: str | None = None, body=None,
         req.add_header("Authorization", f"Bearer {token}")
     verify = get("verify_ssl", cfg)
     try:
-        with urllib.request.urlopen(req, context=_ctx(verify), timeout=180) as r:
+        with urllib.request.urlopen(req, context=_ctx(verify, cfg), timeout=180) as r:
             raw = r.read().decode("utf-8")
             status = getattr(r, "status", None) or r.getcode()
     except urllib.error.HTTPError as e:  # must precede URLError, it subclasses it
@@ -237,7 +253,7 @@ def main(argv):
     if cmd == "path":
         print(active_config() or CONFIG_PATH)
     elif cmd == "show":
-        out = {k: get(k, cfg) for k in ENV}
+        out = {k: (get(k, cfg) or "") for k in ENV}   # unset reads as "", not null
         out["api_key"] = _mask(out.get("api_key"))
         out["verify_ssl"] = get("verify_ssl", cfg)
         active = active_config()

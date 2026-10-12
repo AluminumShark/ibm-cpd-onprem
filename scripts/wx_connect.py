@@ -52,8 +52,10 @@ def pick_supported_version(requested):
             return (0,)
     best = max(supported, key=keyf) if supported else (requested or "5.2")
     if requested and requested != best:
-        sys.stderr.write(f"[info] SDK does not accept version={requested}; using {best} "
-                         f"(API behaviour is identical)\n")
+        sys.stderr.write(f"[info] SDK does not accept version={requested}; "
+                         f"falling back to {best}. The read-only calls this "
+                         f"script makes are unaffected; other APIs are not "
+                         f"guaranteed to behave the same across CPD versions.\n")
     return best
 
 
