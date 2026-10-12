@@ -56,7 +56,17 @@ The wizard writes `~/.config/cpd-onprem/config.json` (git-ignored, `chmod 600`).
 ## Configuration & credentials
 
 Every setting resolves as **explicit arg → `CPD_*` env var → config file**, so env
-vars always override the file (handy for CI or a second cluster):
+vars always override any file (handy for CI or a second cluster). The config file
+itself is the first of these that exists:
+
+1. `$CPD_CONFIG` — an explicit path, for juggling several clusters.
+2. **`./config.json`** — in the checkout, beside `config.example.json`. Copy the
+   example, fill it in, and the clone is self-contained.
+3. `~/.config/cpd-onprem/config.json` — what `cpd_init.py` writes by default,
+   shared by every checkout and by the installed skill.
+
+`python scripts/cpd_config.py show` always names the file it actually read, so
+there is never a question of which one won.
 
 | Setting | Env var | Notes |
 |---|---|---|
@@ -108,14 +118,27 @@ this also works for a second cluster or for CI.
 place of the platform key for the REST, SDK and ADK paths. Put it in
 `CPD_API_KEY` the same way.
 
+**Option D — a self-contained checkout** (no wizard, nothing in your home dir):
+
+```bash
+cp config.example.json config.json   # then edit url / username / api_key
+python scripts/cpd_config.py show    # confirms it read ./config.json
+```
+
+`config.json` is git-ignored at any depth, so it is never committed — and
+`cpd_config.py` warns on every run if that `.gitignore` rule ever disappears.
+Keep in mind the file still sits inside a work tree, where `git clean -x`, a
+zip of the folder, or an editor's "add everything" can carry it off. Prefer
+option A or B on a machine you share.
+
 Whichever you choose, check it resolved (the key is masked in the output):
 
 ```bash
 python scripts/cpd_config.py show
 ```
 
-Nothing secret is ever written into this repo. If a key leaks, rotate it in the
-CPD profile page.
+Nothing secret is ever **committed**, whichever option you pick. If a key leaks,
+rotate it in the CPD profile page.
 
 ## Use as a Claude Code skill
 

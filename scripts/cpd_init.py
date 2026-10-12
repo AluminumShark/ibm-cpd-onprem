@@ -144,15 +144,18 @@ def main():
         "deployment_id": deployment_id,
         "wxo_instance_url": wxo_url,
     }
-    C.CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(C.CONFIG_PATH, "w", encoding="utf-8") as f:
+    # Update the file already in effect, so the wizard never writes to one
+    # place while every other script reads another.
+    target = C.active_config() or C.CONFIG_PATH
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with open(target, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=2)
     try:
-        os.chmod(C.CONFIG_PATH, 0o600)
+        os.chmod(target, 0o600)
     except Exception:
         pass
 
-    print(f"\nsaved → {C.CONFIG_PATH}")
+    print(f"\nsaved → {target}")
     shown = dict(out); shown["api_key"] = C._mask(out["api_key"]) if out["api_key"] else "(use CPD_API_KEY)"
     print(json.dumps(shown, ensure_ascii=False, indent=2))
     if not out["api_key"]:

@@ -7,11 +7,16 @@ no third-party dependency — so it runs anywhere Python 3.8+ is installed.
 Resolution order for every setting (first hit wins):
     1. explicit CLI arg (callers pass it)      — highest
     2. environment variable  (CPD_*)
-    3. config file  ~/.config/cpd-onprem/config.json
+    3. config file — first of these that exists:
+         a. $CPD_CONFIG                     (explicit path)
+         b. ./config.json                   (beside config.example.json)
+         c. ~/.config/cpd-onprem/config.json  (written by cpd_init.py)
     4. built-in default (only for verify_ssl)  — lowest
 
-Secrets never live in this repo. The config file is created by cpd_init.py and
-is git-ignored; storing the api_key in it is opt-in (default: use CPD_API_KEY).
+Secrets are never committed. Every config.json is git-ignored wherever it sits;
+storing the api_key in one is opt-in (default: use CPD_API_KEY). A checkout-local
+config.json keeps a clone self-contained, at the cost of putting credentials
+inside a work tree — `show` always names the file actually in use.
 
 CLI:
     python cpd_config.py show                 # resolved settings (api_key masked)
@@ -20,6 +25,8 @@ CLI:
     python cpd_config.py path                 # print the config file path
     python cpd_config.py resolve-deployment   # print a usable chat deployment id
 """
+from __future__ import annotations
+
 import json
 import os
 import ssl
@@ -28,7 +35,11 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
-CONFIG_PATH = Path.home() / ".config" / "cpd-onprem" / "config.json"
+CONFIG_NAME = "config.json"
+REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_CONFIG = REPO_ROOT / CONFIG_NAME                       # beside config.example.json
+USER_CONFIG = Path.home() / ".config" / "cpd-onprem" / CONFIG_NAME
+CONFIG_PATH = USER_CONFIG                                   # default write target
 
 # setting name -> environment variable
 ENV = {
@@ -41,15 +52,62 @@ ENV = {
     "wxo_instance_url": "CPD_WXO_INSTANCE_URL",
 }
 
+_warned = set()
 
-def load_file(path: Path = CONFIG_PATH) -> dict:
+
+def config_candidates():
+    """Config files in precedence order; the first one that exists wins."""
+    out = []
+    override = os.environ.get("CPD_CONFIG")
+    if override:
+        out.append(Path(override).expanduser())
+    out.append(REPO_CONFIG)
+    out.append(USER_CONFIG)
+    return out
+
+
+def active_config():
+    """The config file actually in effect, or None when running on env vars."""
+    for p in config_candidates():
+        try:
+            if p.is_file():
+                return p
+        except OSError:
+            continue
+    return None
+
+
+def _gitignore_shields_config() -> bool:
+    """Stdlib check that .gitignore still covers a checkout-local config.json."""
+    try:
+        lines = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return False
+    return any(ln.strip().lstrip("/") == CONFIG_NAME for ln in lines)
+
+
+def _warn_once(key: str, msg: str) -> None:
+    if key not in _warned:
+        _warned.add(key)
+        sys.stderr.write(msg)
+
+
+def load_file(path=None) -> dict:
+    if path is None:
+        path = active_config()
+        if path is None:
+            return {}
+        if path == REPO_CONFIG and not _gitignore_shields_config():
+            _warn_once("unshielded", (
+                "[warn] %s holds credentials but .gitignore no longer excludes "
+                "%s — restore that rule before committing.\n" % (path, CONFIG_NAME)))
     try:
         with open(path, encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
         return {}
     except Exception as e:  # malformed file shouldn't be fatal for env-only use
-        sys.stderr.write(f"[warn] ignoring unreadable config {path}: {e}\n")
+        sys.stderr.write("[warn] ignoring unreadable config %s: %s\n" % (path, e))
         return {}
 
 
@@ -169,12 +227,13 @@ def main(argv):
     cmd = argv[0]
     cfg = load_file()
     if cmd == "path":
-        print(CONFIG_PATH)
+        print(active_config() or CONFIG_PATH)
     elif cmd == "show":
         out = {k: get(k, cfg) for k in ENV}
         out["api_key"] = _mask(out.get("api_key"))
         out["verify_ssl"] = get("verify_ssl", cfg)
-        out["_config_file"] = str(CONFIG_PATH) if CONFIG_PATH.exists() else "(none)"
+        active = active_config()
+        out["_config_file"] = str(active) if active else "(none — env vars only)"
         print(json.dumps(out, ensure_ascii=False, indent=2))
     elif cmd == "get":
         if len(argv) < 2:

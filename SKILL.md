@@ -82,6 +82,10 @@ file**. So env vars always override the file (handy for CI or a second cluster):
 | WXO instance URL | `CPD_WXO_INSTANCE_URL` |
 | verify TLS | `CPD_VERIFY_SSL` (default off — self-signed) |
 
+Which config file? The first of `$CPD_CONFIG`, `./config.json` in the checkout,
+then `~/.config/cpd-onprem/config.json`. `show` names the one actually read, so
+when a value looks stale, check that line before assuming the cluster is wrong.
+
 Quick checks: `python scripts/cpd_config.py show` (resolved settings, key masked),
 `python scripts/cpd_config.py token` (a bearer token).
 
