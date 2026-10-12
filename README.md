@@ -71,20 +71,83 @@ fronted by OpenShift, the login page asks for an identity provider first. Pick
 and password. Once inside, generate the platform API key from the profile page
 and feed it to `cpd_init.py` or `CPD_API_KEY`.
 
-**The API key is never stored by default** — the wizard asks, and the default is to
-keep it in `CPD_API_KEY` instead of the file. Nothing secret is ever written to
-this repo. If a key leaks, rotate it in the CPD profile page.
+### Supplying the API key
+
+`cpd_init.py` prompts for the key but **does not store it by default** — it
+verifies the key, discovers your cluster IDs, then asks *"Store the API key in the
+config file? (y/N)"*. Answer **N** and only non-secret settings are written; the
+key has to come from the environment on each use. Pick whichever fits:
+
+**Option A — let the wizard store it** (simplest; single-user workstation):
+
+```bash
+python scripts/cpd_init.py        # answer y at "Store the API key..."
+```
+
+It lands in `~/.config/cpd-onprem/config.json`, which is `chmod 600` and matched
+by `.gitignore`. Every script then works with no extra setup.
+
+**Option B — keep it in the environment** (recommended; nothing secret on disk):
+
+```bash
+export CPD_API_KEY="<your-platform-api-key>"        # bash / zsh / WSL
+```
+```powershell
+$env:CPD_API_KEY = "<your-platform-api-key>"        # PowerShell, current shell
+[Environment]::SetEnvironmentVariable('CPD_API_KEY','<key>','User')   # persist
+```
+
+Set it before running any script. `CPD_*` env vars override the config file, so
+this also works for a second cluster or for CI.
+
+**Option C — your password instead of a key.** The CPD login password works in
+place of the platform key for the REST, SDK and ADK paths. Put it in
+`CPD_API_KEY` the same way.
+
+Whichever you choose, check it resolved (the key is masked in the output):
+
+```bash
+python scripts/cpd_config.py show
+```
+
+Nothing secret is ever written into this repo. If a key leaks, rotate it in the
+CPD profile page.
 
 ## Use as a Claude Code skill
 
-Drop the folder into your skills directory and Claude will load it:
+Claude Code loads any folder placed in a `skills/` directory, as long as that
+folder has a `SKILL.md` at its root — which this repo does. There is nothing to
+build or register.
+
+**1. Put the folder where Claude Code looks.** Personal (available in every
+project) or project-scoped (shared with whoever clones that project):
 
 ```bash
-# personal (all projects)
-cp -r ibm-cpd-onprem ~/.claude/skills/
-# or project-scoped
-cp -r ibm-cpd-onprem <project>/.claude/skills/
+REPO=https://github.com/AluminumShark/ibm-cpd-onprem.git
+
+# personal — available in all your projects
+git clone $REPO ~/.claude/skills/ibm-cpd-onprem
+
+# or project-scoped — commit it with the project
+git clone $REPO <project>/.claude/skills/ibm-cpd-onprem
 ```
+
+On Windows the personal path is `%USERPROFILE%\.claude\skills\ibm-cpd-onprem`
+(PowerShell: `$env:USERPROFILE\.claude\skills\ibm-cpd-onprem`).
+
+Already cloned somewhere? `cp -r ibm-cpd-onprem ~/.claude/skills/` does the same.
+The folder name is free, but `SKILL.md` must sit directly inside it — not one
+level deeper.
+
+**2. Start a new Claude Code session.** Skills are read at startup, so an already
+running session will not see it.
+
+**3. Confirm it loaded.** Run `/skills`; `ibm-cpd-onprem` should be listed.
+
+**4. Set up credentials once** — see
+[Supplying the API key](#supplying-the-api-key) above. The skill reads the same
+`~/.config/cpd-onprem/config.json` and `CPD_*` env vars as the CLI, so if
+`python scripts/cpd_config.py show` works, the skill works.
 
 Then ask things like *"chat with gpt-oss on the on-prem cluster"*, *"list the
 Orchestrate agents on my CPD"*, *"inventory watsonx.ai"* — the skill triggers and
