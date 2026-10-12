@@ -73,3 +73,11 @@ A watsonx.ai-scoped key is not necessarily a platform key, and a key created by
 another user won't authenticate your username. Use the **CPD platform API key**
 that matches `CPD_USERNAME` (generate it in the CPD profile page). The password
 also works in place of the key for both the ADK and the SDK.
+
+## 9. Can't sign in to the CPD web console
+The console login page on an OpenShift-fronted cluster asks which identity
+provider to use before it shows a username/password form — picking the wrong one
+rejects otherwise-valid credentials.
+**Fix:** choose **OpenShift authentication**, then **htpasswd**, then sign in with
+the cluster username and password. The platform API key used by `CPD_API_KEY` is
+generated from the profile page once you are inside.

@@ -65,6 +65,12 @@ vars always override the file (handy for CI or a second cluster):
 | WXO instance URL | `CPD_WXO_INSTANCE_URL` | for the ADK |
 | verify TLS | `CPD_VERIFY_SSL` | default off (self-signed) |
 
+**Signing in to the web console** (where you generate the API key): on a cluster
+fronted by OpenShift, the login page asks for an identity provider first. Pick
+**OpenShift authentication**, then **htpasswd**, then enter your cluster username
+and password. Once inside, generate the platform API key from the profile page
+and feed it to `cpd_init.py` or `CPD_API_KEY`.
+
 **The API key is never stored by default** — the wizard asks, and the default is to
 keep it in `CPD_API_KEY` instead of the file. Nothing secret is ever written to
 this repo. If a key leaks, rotate it in the CPD profile page.
