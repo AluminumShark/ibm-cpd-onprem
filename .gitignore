@@ -1,0 +1,20 @@
+# Never commit real credentials or environment-specific config
+config.json
+.env
+.env.*
+!config.example.json
+
+# Packaged skill bundles
+*.skill
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

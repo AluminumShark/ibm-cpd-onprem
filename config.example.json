@@ -1,0 +1,11 @@
+{
+  "_comment": "Copy of the file that cpd_init.py generates at ~/.config/cpd-onprem/config.json. You normally do NOT edit this by hand — run `python scripts/cpd_init.py`. Every value can also be supplied via an environment variable (CPD_URL, CPD_USERNAME, CPD_API_KEY, CPD_SPACE_ID, CPD_PROJECT_ID, CPD_DEPLOYMENT_ID, CPD_WXO_INSTANCE_URL, CPD_VERIFY_SSL), which takes precedence over this file.",
+  "url": "https://your-cpd-host.example.com",
+  "username": "your-username",
+  "api_key": "",
+  "verify_ssl": false,
+  "space_id": "",
+  "project_id": "",
+  "deployment_id": "",
+  "wxo_instance_url": ""
+}

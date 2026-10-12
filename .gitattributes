@@ -1,0 +1,10 @@
+# Normalize line endings: store and check out text as LF on every platform.
+# Critical for the *.sh scripts — CRLF breaks bash on Linux/WSL.
+* text=auto eol=lf
+
+# Explicit for the executable scripts
+*.sh    text eol=lf
+*.py    text eol=lf
+
+# Treat packaged skills / archives as binary
+*.skill binary
