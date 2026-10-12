@@ -1,0 +1,58 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The README promises Python 3.8+; prove it on the oldest and newest.
+        python-version: ["3.8", "3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Run the unit tests
+        # Offline by design: no cluster, no credentials, no network.
+        run: uv run --python ${{ matrix.python-version }} --with pytest pytest
+
+  hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shell scripts parse
+        run: for f in scripts/*.sh; do bash -n "$f"; done
+
+      - name: No config.json is tracked
+        run: |
+          if git ls-files | grep -x 'config.json'; then
+            echo "::error::config.json is tracked; it holds credentials"
+            exit 1
+          fi
+          grep -qx 'config.json' .gitignore || {
+            echo "::error::.gitignore no longer excludes config.json"; exit 1; }
+          echo "config.json is ignored and untracked"
+
+      - name: No credential-shaped literals
+        # A committed credential is a quoted, random-looking literal: long, and
+        # mixing upper, lower and digits. Placeholders in tests and docs fail
+        # those character-class filters, so they are not special-cased by path.
+        run: |
+          set -o pipefail
+          hits=$(grep -rInE '(api[_-]?key|password|secret|token)"?[[:space:]]*[:=][[:space:]]*"[A-Za-z0-9/+_=-]{20,}"' \
+                   --exclude-dir=.git --exclude-dir=.github . \
+                 | grep -E '[0-9]' | grep -E '[a-z]' | grep -E '[A-Z]') || true
+          if [ -n "$hits" ]; then
+            echo "$hits"
+            echo "::error::a credential-shaped literal is committed"
+            exit 1
+          fi
+          echo "no credential-shaped literals"
