@@ -9,10 +9,23 @@ Run:  python wx_connect.py
 """
 import os
 import sys
-import urllib3
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import cpd_config as C  # noqa: E402
+
+INSTALL_HINT = (
+    "the ibm-watsonx-ai SDK is not installed — this script needs it "
+    "(the token/chat scripts do not).\n"
+    "  install:  pip install ibm-watsonx-ai\n"
+    "  then:     python wx_connect.py\n"
+    "Prefer no extra dependency? The same inventory is available over plain "
+    "REST — see references/rest-api.md."
+)
+
+try:
+    import urllib3
+except ModuleNotFoundError:
+    sys.exit(INSTALL_HINT)
 
 urllib3.disable_warnings()
 
@@ -45,7 +58,10 @@ def pick_supported_version(requested):
 
 
 def main():
-    from ibm_watsonx_ai import APIClient, Credentials
+    try:
+        from ibm_watsonx_ai import APIClient, Credentials
+    except ModuleNotFoundError:
+        sys.exit(INSTALL_HINT)
 
     url = C.get("url")
     username = C.get("username")

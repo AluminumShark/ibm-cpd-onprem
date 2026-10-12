@@ -29,6 +29,28 @@ Three control planes, each a thin client that calls the cluster over HTTPS REST
 2. **`orchestrate` ADK CLI** — manages watsonx Orchestrate (agents, tools, models, knowledge bases).
 3. **`ibm_watsonx_ai` Python SDK** — manages watsonx.ai + Watson Machine Learning.
 
+## Prerequisites: check the path you need, install on demand
+
+Only Python 3.8+ and `curl` are always required — `cpd_config.py`,
+`cpd_token.sh` and `wx_chat.sh` are standard-library only and never need a pip
+install. The other two control planes each need one package:
+
+| Path | Check first | If the check fails |
+|---|---|---|
+| REST (token, chat, inventory) | `python --version` | nothing to install |
+| watsonx.ai SDK (`wx_connect.py`) | `python -c "import ibm_watsonx_ai"` | `pip install ibm-watsonx-ai` |
+| Orchestrate ADK (`orchestrate ...`) | `orchestrate --version` | `pip install ibm-watsonx-orchestrate` |
+
+Run the check before the first command of a path, not after a failure —
+`orchestrate: command not found` and a `ModuleNotFoundError` traceback both read
+as "the cluster is broken" to a user who does not know a package is missing.
+
+When a check fails, say plainly what is missing, give the one-line install
+command, and ask before running it — installing into the user's Python
+environment is their call. If they would rather not install anything, the REST
+path in [references/rest-api.md](references/rest-api.md) covers auth, chat and
+inventory with nothing but `curl`.
+
 ## First run on any machine: `cpd_init.py`
 
 Nothing is hard-coded to a specific cluster. Before the first operation, make
@@ -108,6 +130,7 @@ HTTP 400 (`json_validation_error`); the allowed siblings are `context`, `tools`,
 — strip it for end users).
 
 ### Connect the SDK (read or manage watsonx.ai/WML)
+Needs `ibm-watsonx-ai`; `wx_connect.py` prints the install command if it is absent.
 ```bash
 export PYTHONIOENCODING=utf-8 PYTHONUTF8=1
 python scripts/wx_connect.py
@@ -121,6 +144,7 @@ raise "You must set the space/project id" otherwise.
 ### Point the ADK at this cluster
 ```bash
 export PYTHONIOENCODING=utf-8 PYTHONUTF8=1
+orchestrate --version || pip install ibm-watsonx-orchestrate   # check first
 orchestrate env add -n cpd-onprem -u "$(python scripts/cpd_config.py get wxo_instance_url)" -t cpd --insecure
 orchestrate env activate cpd-onprem -u "$(python scripts/cpd_config.py get username)" -a "$CPD_API_KEY" --skip-version-check
 orchestrate models list

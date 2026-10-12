@@ -4,6 +4,16 @@ CLI: `orchestrate` (pip package `ibm-watsonx-orchestrate`). Verified first-hand
 through a full import→verify→remove cycle on a live CPD instance. Command surface
 and flags below are from ADK v1.12.0; check `--help` if your version differs.
 
+## Install & verify the CLI first
+```bash
+orchestrate --version          # "ADK Version: 1.12.0" -> already installed
+pip install ibm-watsonx-orchestrate
+```
+`orchestrate: command not found` (PowerShell: `'orchestrate' is not recognized`)
+means the package is absent, not that the cluster is down. After installing,
+open a new shell so the console script lands on `PATH`. Nothing else in this
+toolkit needs the ADK — only the Orchestrate path does.
+
 ## ALWAYS export this first
 ```bash
 export PYTHONIOENCODING=utf-8 PYTHONUTF8=1

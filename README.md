@@ -30,8 +30,12 @@ CPD deployment.
 - Python 3.8+ (the auth/chat/config scripts are **standard-library only**).
 - `curl` (for `wx_chat.sh`) and a POSIX shell, or use the PowerShell snippets in
   the references.
-- Optional: `pip install ibm-watsonx-ai` for `wx_connect.py`;
-  `pip install ibm-watsonx-orchestrate` for the ADK path.
+- Optional, one package per extra path — neither is needed for auth or chat:
+  - `pip install ibm-watsonx-ai` for `wx_connect.py` (SDK inventory).
+  - `pip install ibm-watsonx-orchestrate` for the `orchestrate` ADK CLI.
+
+  Both scripts tell you which package is missing and how to install it rather
+  than failing with a traceback, and the skill checks before it picks a path.
 
 ## Quick start
 
