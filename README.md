@@ -199,6 +199,20 @@ ibm-cpd-onprem/
     └── wx_connect.py     # SDK read-only inventory
 ```
 
+## Tests
+
+Offline unit tests — no cluster, no credentials, no network:
+
+```bash
+uv run --with pytest pytest
+```
+
+They cover the things that silently break a working setup: config precedence
+(including `CPD_VERIFY_SSL` over a stored value), the wizard keeping an existing
+API key, resource ids not surviving a cluster or space switch, unreachable-host
+diagnostics, and `get api_key` refusing to print the key without `--reveal`.
+`pytest` is a dev dependency only; the toolkit itself stays standard-library.
+
 ## Contributing
 
 Issues and PRs welcome. Please keep the standard-library-only promise for the
