@@ -1,13 +1,9 @@
 # ibm-cpd-onprem
 
 [![tests](https://github.com/AluminumShark/ibm-cpd-onprem/actions/workflows/tests.yml/badge.svg)](https://github.com/AluminumShark/ibm-cpd-onprem/actions/workflows/tests.yml)
-[![python](https://img.shields.io/badge/python-3.8%20%7C%203.11%20%7C%203.13-3776AB?logo=python&logoColor=white)](#verified-against)
-[![tested with uv](https://img.shields.io/badge/tested%20with-uv-DE5FE9?logo=uv&logoColor=white)](#tests)
-[![license](https://img.shields.io/badge/license-Apache--2.0-D22128)](LICENSE)
-
+[![python](https://img.shields.io/badge/python-3.8%2B-3776AB?logo=python&logoColor=white)](#verified-against)
 [![Cloud Pak for Data](https://img.shields.io/badge/Cloud%20Pak%20for%20Data-5.3-052FAD)](#verified-against)
-[![ibm-watsonx-ai](https://img.shields.io/badge/ibm--watsonx--ai-1.3.39-0F62FE)](#verified-against)
-[![Orchestrate ADK](https://img.shields.io/badge/Orchestrate%20ADK-1.12.0-0F62FE)](#verified-against)
+[![license](https://img.shields.io/badge/license-Apache--2.0-D22128)](LICENSE)
 
 A portable command-line toolkit **and** a [Claude Code](https://docs.claude.com/en/docs/claude-code/skills)
 skill for operating an **on-prem IBM Cloud Pak for Data / IBM Software Hub**
