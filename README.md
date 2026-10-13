@@ -26,6 +26,10 @@ CPD deployment.
   the `ibm_watsonx_ai` SDK (`wx_connect.py`) or raw REST.
 - **Orchestrate** — build / import / list / remove agents and tools with the
   `orchestrate` ADK CLI (see [references/orchestrate-adk.md](references/orchestrate-adk.md)).
+- **External-provider agents** — back a native watsonx Orchestrate agent with an
+  external LLM (Anthropic Claude, OpenAI, Google Gemini, Mistral, Groq, Azure,
+  Bedrock, Vertex, Ollama…) through the AI Gateway, one command, with the API key
+  kept out of the transcript, your shell history and git (`wxo_setup_agent.py`).
 - **Encodes the gotchas** that otherwise cost an afternoon — console encoding,
   self-signed TLS, SDK version rejection, chat body validation, `cpdctl` locale
   panic (see [references/gotchas.md](references/gotchas.md)).
@@ -64,6 +68,34 @@ python scripts/wx_connect.py
 
 The wizard writes `~/.config/cpd-onprem/config.json` (git-ignored, `chmod 600`).
 
+## Back an agent with an external provider (Claude, OpenAI, Gemini…)
+
+watsonx Orchestrate can run a **native** agent on an external LLM through its
+built-in AI Gateway. Put the provider key in `providers.env` (never on the command
+line), then wire up a connection, a model and the agent in one command:
+
+```bash
+# 1. keys live here — git-ignored, one line per provider secret
+cp providers.env.example ~/.config/cpd-onprem/providers.env
+#    then edit it:  WXO_GOOGLE_API_KEY=...   (or WXO_ANTHROPIC_API_KEY=..., etc.)
+
+# 2. one-shot: connection + model + native agent, and a smoke test
+python scripts/wxo_setup_agent.py --provider google --model gemini-2.5-flash \
+  --agent-name my_agent --test "Reply with exactly: PONG"
+
+# 3. tear it all down again
+python scripts/wxo_setup_agent.py --provider google --model gemini-2.5-flash \
+  --agent-name my_agent --cleanup
+```
+
+The key is read from `providers.env` (or a `WXO_*` env var) by `wxo_add_provider.py`
+and handed to the connection once — it is never printed, echoed, or written to a
+spec. The gateway must be able to reach the provider's API (`api.anthropic.com`,
+etc.); air-gapped clusters can point `--provider-config custom_host=…` at a
+self-hosted OpenAI-compatible endpoint instead. Full flow, the provider→fields
+table, and the runs-API call to invoke an agent are in
+[references/orchestrate-adk.md](references/orchestrate-adk.md).
+
 ## Configuration & credentials
 
 Every setting resolves as **explicit arg → `CPD_*` env var → config file**, so env
@@ -78,6 +110,10 @@ itself is the first of these that exists:
 
 `python scripts/cpd_config.py show` always names the file it actually read, so
 there is never a question of which one won.
+
+Cluster credentials live here. **External-provider** API keys (Claude, OpenAI,
+Gemini…) are kept separately in `providers.env` — see the section above — so a
+provider secret never has to sit beside your cluster config.
 
 | Setting | Env var | Notes |
 |---|---|---|

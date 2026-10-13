@@ -1,8 +1,10 @@
 # Never commit real credentials or environment-specific config
 config.json
+providers.env
 .env
 .env.*
 !config.example.json
+!providers.env.example
 
 # Packaged skill bundles
 *.skill

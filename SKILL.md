@@ -71,6 +71,13 @@ It writes `~/.config/cpd-onprem/config.json` (git-ignored, chmod 600). If that
 file is absent and no `CPD_*` env vars are set, stop and ask the user to run it
 (or to provide URL + username + API key for this session).
 
+**External-provider keys** (for backing a WXO native agent with Anthropic,
+OpenAI, Gemini…) live separately in `providers.env` — default
+`~/.config/cpd-onprem/providers.env` (chmod 600, git-ignored), override
+`$WXO_PROVIDERS_ENV` — as `WXO_<PROVIDER>_<FIELD>` lines, or the same env vars.
+See `providers.env.example`; never put a provider key in `config.json` or the
+repo. A real env var overrides the file, same as `config.json`.
+
 ### How settings resolve (every script obeys this)
 `scripts/cpd_config.py` is the single source of truth. For each setting it takes
 the first available of: **explicit arg → `CPD_*` environment variable → config
@@ -117,6 +124,7 @@ Quick checks: `python scripts/cpd_config.py show` (resolved settings, key masked
 |---|---|---|
 | Token / raw inventory / one-off chat | REST + `curl` (or the bundled scripts) | [references/rest-api.md](references/rest-api.md) |
 | Build/deploy/remove Orchestrate **agents & tools** | `orchestrate` ADK CLI | [references/orchestrate-adk.md](references/orchestrate-adk.md) |
+| Back a native agent with an **external LLM** (Claude/OpenAI/Gemini…) | `scripts/wxo_setup_agent.py` + ADK | [orchestrate-adk.md › external provider](references/orchestrate-adk.md#back-a-native-agent-with-an-external-provider-ai-gateway) |
 | Inventory/manage **watsonx.ai / WML** | `ibm_watsonx_ai` SDK | [references/watsonx-sdk.md](references/watsonx-sdk.md) |
 | Diagnose a weird error | — | [references/gotchas.md](references/gotchas.md) |
 
@@ -174,6 +182,11 @@ sharp edges.
   inventory; reserve create/import/deploy/remove for explicit requests.
 - Secrets flow through env vars / a chmod-600 config, never into the repo or
   chat. If a key is ever pasted somewhere shared, advise rotating it.
+- **Never read, print, echo, or inline an external-provider API key** (Anthropic,
+  OpenAI, Gemini, Bedrock…). Supply it only via `providers.env` / `WXO_*` env
+  vars and let `scripts/wxo_add_provider.py` set it on the connection. If a
+  provider key is pasted into chat, treat it as compromised and tell the user to
+  rotate it.
 
 ## Known limitations (see gotchas.md for fixes)
 

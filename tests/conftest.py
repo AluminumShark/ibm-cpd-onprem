@@ -18,8 +18,11 @@ ALL_CPD_VARS = (
 
 @pytest.fixture(autouse=True)
 def clean_env(monkeypatch):
-    """No CPD_* leaks in from the developer's own shell."""
+    """No CPD_* / WXO_* secrets leak in from the developer's own shell."""
     for name in ALL_CPD_VARS:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.delenv("WXO_PROVIDERS_ENV", raising=False)
+    for name in [n for n in os.environ if n.startswith("WXO_")]:
         monkeypatch.delenv(name, raising=False)
 
 
