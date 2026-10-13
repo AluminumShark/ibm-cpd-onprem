@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Resolve connection settings for an on-prem IBM Cloud Pak for Data cluster.
 
 Single source of truth for every script in this skill. Pure standard library —
@@ -18,7 +18,7 @@ storing the api_key in one is opt-in (default: use CPD_API_KEY). A checkout-loca
 config.json keeps a clone self-contained, at the cost of putting credentials
 inside a work tree — `show` always names the file actually in use.
 
-CLI:
+CLI (python3 in place of python on macOS/Linux):
     python cpd_config.py show                 # resolved settings (api_key masked)
     python cpd_config.py get <key>            # print one resolved value
     python cpd_config.py token                # print a bearer token (~12h)

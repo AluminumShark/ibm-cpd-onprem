@@ -41,6 +41,11 @@ install. The other two control planes each need one package:
 | watsonx.ai SDK (`wx_connect.py`) | `python -c "import ibm_watsonx_ai"` | `pip install ibm-watsonx-ai` |
 | Orchestrate ADK (`orchestrate ...`) | `orchestrate --version` | `pip install ibm-watsonx-orchestrate` |
 
+On macOS and most Linux the interpreter is `python3` and `pip` is
+`python3 -m pip` — use those wherever this skill writes `python` / `pip`.
+`cpd_token.sh` and `wx_chat.sh` pick a working `python3` or `python` on their
+own; `CPD_PYTHON` overrides the choice.
+
 Run the check before the first command of a path, not after a failure —
 `orchestrate: command not found` and a `ModuleNotFoundError` traceback both read
 as "the cluster is broken" to a user who does not know a package is missing.
@@ -81,6 +86,7 @@ file**. So env vars always override the file (handy for CI or a second cluster):
 | default deployment | `CPD_DEPLOYMENT_ID` |
 | WXO instance URL | `CPD_WXO_INSTANCE_URL` |
 | verify TLS | `CPD_VERIFY_SSL` (default off — self-signed) |
+| CA bundle | `CPD_CA_BUNDLE` (PEM for a private CA; used while verifying) |
 
 Which config file? The first of `$CPD_CONFIG`, `./config.json` in the checkout,
 then `~/.config/cpd-onprem/config.json`. `show` names the one actually read, so

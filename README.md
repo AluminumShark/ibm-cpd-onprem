@@ -32,20 +32,26 @@ CPD deployment.
 
 ## Requirements
 
-- Python 3.8+ (the auth/chat/config scripts are **standard-library only**).
-- `curl` (for `wx_chat.sh`) and a POSIX shell, or use the PowerShell snippets in
-  the references.
+- Python 3.8+ (the auth/chat/config scripts are **standard-library only**). On
+  macOS and most Linux distributions the command is `python3`, and `pip` is
+  `python3 -m pip` — read the examples below that way. The `.sh` scripts find a
+  working `python3` or `python` on their own; set `CPD_PYTHON` to pick one.
+- `curl` (for `wx_chat.sh`) and bash — Git Bash or WSL on Windows; macOS's stock
+  bash 3.2 is enough — or use the PowerShell snippets in the references.
 - Optional, one package per extra path — neither is needed for auth or chat:
   - `pip install ibm-watsonx-ai` for `wx_connect.py` (SDK inventory).
   - `pip install ibm-watsonx-orchestrate` for the `orchestrate` ADK CLI.
 
   Both scripts tell you which package is missing and how to install it rather
   than failing with a traceback, and the skill checks before it picks a path.
+  Homebrew's Python (and recent Debian/Ubuntu) refuses a system-wide `pip
+  install`; install into a virtualenv (`python3 -m venv .venv`) instead.
 
 ## Quick start
 
 ```bash
 # 1. one-time setup — verifies creds and discovers your cluster's IDs
+#    (macOS / Linux: python3 wherever these examples say python)
 python scripts/cpd_init.py
 
 # 2. check what got resolved (API key is masked)
@@ -234,8 +240,13 @@ uv run --with pytest pytest
 They cover the things that silently break a working setup: config precedence
 (including `CPD_VERIFY_SSL` over a stored value), the wizard keeping an existing
 API key, resource ids not surviving a cluster or space switch, unreachable-host
-diagnostics, and `get api_key` refusing to print the key without `--reveal`.
+diagnostics, `get api_key` refusing to print the key without `--reveal`, and the
+`.sh` scripts' Python discovery and curl TLS flags (real bash, stub `curl`).
 `pytest` is a dev dependency only; the toolkit itself stays standard-library.
+
+CI runs them on Ubuntu and macOS against Python 3.8, 3.11 and 3.13; on macOS the
+shell-script tests use the stock `/bin/bash` 3.2. On Windows they use Git Bash,
+and skip without it.
 
 ## Contributing
 

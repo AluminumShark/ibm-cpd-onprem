@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Interactive setup for an on-prem IBM Cloud Pak for Data cluster.
 
 Prompts for the cluster URL, username and API key, verifies them by fetching a
@@ -7,7 +7,7 @@ project and watsonx Orchestrate instance — so you never have to know any IDs b
 hand. Writes everything to ~/.config/cpd-onprem/config.json (git-ignored, chmod
 600 where supported).
 
-Run:  python cpd_init.py
+Run:  python3 cpd_init.py      (python on Windows)
 Re-run any time to point at a different cluster or refresh the discovered IDs.
 Pure standard library; works offline-free against any CPD/Software Hub cluster.
 """
@@ -199,7 +199,8 @@ def main():
     if not out["api_key"]:
         var = "$env:CPD_API_KEY" if os.name == "nt" else "export CPD_API_KEY="
         print(f"\nAPI key not stored. Set it per shell, e.g.  {var}\"<key>\"")
-    print("\nDone. Try:  python cpd_config.py show   |   bash wx_chat.sh \"hello\"")
+    py = "python" if os.name == "nt" else "python3"
+    print(f"\nDone. Try:  {py} cpd_config.py show   |   bash wx_chat.sh \"hello\"")
 
 
 if __name__ == "__main__":

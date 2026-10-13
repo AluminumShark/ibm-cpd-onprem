@@ -7,11 +7,15 @@ on:
 
 jobs:
   pytest:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        # macOS has no `python`, only python3, and runs the shell-script tests
+        # under its stock /bin/bash 3.2.
+        os: [ubuntu-latest, macos-latest]
         # The README promises Python 3.8+; prove it on the oldest and newest.
+        # uv fetches its own CPython builds, 3.8 for arm64 macOS included.
         python-version: ["3.8", "3.11", "3.13"]
     steps:
       - uses: actions/checkout@v4
@@ -56,3 +60,15 @@ jobs:
             exit 1
           fi
           echo "no credential-shaped literals"
+
+  bash-3-2:
+    # macOS still ships bash 3.2 as /bin/bash: no mapfile, no ${var,,}, no
+    # associative arrays. Call it by path: Homebrew's bash 5 may be first on PATH.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shell scripts parse under /bin/bash 3.2
+        run: |
+          /bin/bash --version | head -n 1
+          for f in scripts/*.sh; do /bin/bash -n "$f"; done

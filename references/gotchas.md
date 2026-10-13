@@ -81,3 +81,13 @@ rejects otherwise-valid credentials.
 **Fix:** choose **OpenShift authentication**, then **htpasswd**, then sign in with
 the cluster username and password. The platform API key used by `CPD_API_KEY` is
 generated from the profile page once you are inside.
+
+## 10. `python: command not found` (macOS, most Linux)
+**Symptom:** a command from these docs fails with `command not found: python`
+(or `pip`).
+**Why:** macOS 12.3+ and most Linux distributions ship only `python3`, with pip
+as `pip3` / `python3 -m pip`.
+**Fix:** type `python3` wherever the docs say `python`. `cpd_token.sh` and
+`wx_chat.sh` already try `python3`, then `python`, and use the first that runs
+Python 3.8+ — which also skips a Windows Store `python3` stub that does not.
+Set `CPD_PYTHON=/path/to/python` to choose one explicitly.

@@ -1,11 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Connect to the configured CPD cluster via the ibm_watsonx_ai SDK and print a
 read-only inventory (deployments, chat/embedding models, spaces). Creates nothing.
 
 Settings come from cpd_config.py (env CPD_* > ~/.config/cpd-onprem/config.json).
 Requires the ibm_watsonx_ai package (the other scripts here do not).
 
-Run:  python wx_connect.py
+Run:  python3 wx_connect.py      (python on Windows)
 """
 import os
 import sys
@@ -13,11 +13,12 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import cpd_config as C  # noqa: E402
 
+PY = "python" if os.name == "nt" else "python3"   # macOS/Linux: no bare python/pip
 INSTALL_HINT = (
     "the ibm-watsonx-ai SDK is not installed — this script needs it "
     "(the token/chat scripts do not).\n"
-    "  install:  pip install ibm-watsonx-ai\n"
-    "  then:     python wx_connect.py\n"
+    f"  install:  {PY} -m pip install ibm-watsonx-ai\n"
+    f"  then:     {PY} wx_connect.py\n"
     "Prefer no extra dependency? The same inventory is available over plain "
     "REST — see references/rest-api.md."
 )

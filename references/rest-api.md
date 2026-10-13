@@ -1,8 +1,10 @@
 # REST API path (CPD bearer token + curl)
 
 All verified first-hand against a live cluster. On-prem clusters usually use a
-self-signed cert → every `curl` uses `-k` (drop it once a real CA is trusted).
-Resolve `$CPD_URL` etc. from config: `python scripts/cpd_config.py get url`.
+self-signed cert → every `curl` uses `-k` (drop it once a real CA is trusted, or
+swap it for `--cacert "$CPD_CA_BUNDLE"` with a private CA).
+Resolve `$CPD_URL` etc. from config: `python scripts/cpd_config.py get url`
+(`python3` on macOS/Linux).
 
 ## 1. Get a bearer token (valid ~12h)
 ```bash
