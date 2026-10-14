@@ -19,6 +19,13 @@ and for the `wxo_*` scripts that call it. The commands below are written bare �
 add the prefix, or activate `.venv`. Pinning a different ADK means editing the
 `wxo` group and re-running `uv sync --group wxo`.
 
+These run from the checkout. From any other directory — which is the normal
+case when Claude uses this as a skill — add `--project <checkout or skill dir>`
+(`uv run --project "$S" --group wxo …`, with script paths under `$S` too).
+Without it uv finds no project, ignores `--group wxo` with only a warning, and
+runs whatever `orchestrate` is on `PATH`; `wxo_adk_check.py` run the same way
+will flag it if that one is too new.
+
 Without uv:
 ```bash
 python scripts/wxo_adk_check.py

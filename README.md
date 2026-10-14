@@ -48,7 +48,9 @@ CPD deployment.
     release, and 2.8.0+ can't manage agents on WXO 5.3.1. With
     [uv](https://docs.astral.sh/uv/), `uv sync --group wxo` installs the pinned
     version (Python 3.11–3.13) into this checkout's own `.venv`, away from the
-    system Python; run it as `uv run --group wxo orchestrate …`. Without uv,
+    system Python; run it as `uv run --group wxo orchestrate …` from the
+    checkout (elsewhere add `--project <checkout>`, or uv ignores the group
+    with just a warning and runs whatever `orchestrate` is on `PATH`). Without uv,
     `pip install "ibm-watsonx-orchestrate==2.7.2"`. Either way,
     `scripts/wxo_adk_check.py` checks the installed one against the server.
     Every pinned version and known conflict is listed under

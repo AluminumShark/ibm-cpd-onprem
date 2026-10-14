@@ -111,7 +111,7 @@ IBM's [on-prem compatibility matrix](https://developer.watson-orchestrate.ibm.co
 names for your Software Hub release. The `wxo` dependency group in
 `pyproject.toml` already pins 2.7.2 into the project's `.venv`:
 ```bash
-uv sync --group wxo
+uv sync --group wxo                                  # from the checkout; elsewhere add --project <dir>
 uv run --group wxo python scripts/wxo_adk_check.py   # -> [ok] ADK 2.7.2 predates workspaces
 # without uv:
 pip install "ibm-watsonx-orchestrate==2.7.2" && python scripts/wxo_adk_check.py
