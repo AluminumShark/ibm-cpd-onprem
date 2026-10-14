@@ -232,6 +232,12 @@ Orchestrate agents on my CPD"*, *"inventory watsonx.ai"* — the skill triggers 
 runs the right path. `SKILL.md` is the entry point; `references/` holds the
 detailed how-to.
 
+**Keeping it current.** A `git clone` updates with
+`git -C ~/.claude/skills/ibm-cpd-onprem pull`. A `cp -r` copy never updates —
+copy it again after pulling, or it keeps serving old instructions (an older
+copy, for example, still tells Claude to install the latest, unpinned ADK, which
+can't manage agents on WXO 5.3.1). Start a new session afterwards.
+
 ## Layout
 
 ```
@@ -247,7 +253,11 @@ ibm-cpd-onprem/
     ├── cpd_config.py     # settings resolver + token/HTTP helpers (stdlib only)
     ├── cpd_token.sh      # print a bearer token
     ├── wx_chat.sh        # one-shot chat
-    └── wx_connect.py     # SDK read-only inventory
+    ├── wx_connect.py     # SDK read-only inventory
+    ├── wxo_adk_check.py  # is the installed ADK compatible with this server?
+    ├── wxo_add_provider.py  # external-LLM credentials -> WXO connection
+    ├── wxo_setup_agent.py   # native agent backed by an external LLM
+    └── wxo_run_agent.py     # invoke an agent over the runs API
 ```
 
 ## Verified against
