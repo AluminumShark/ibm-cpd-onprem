@@ -44,10 +44,13 @@ CPD deployment.
   bash 3.2 is enough — or use the PowerShell snippets in the references.
 - Optional, one package per extra path — neither is needed for auth or chat:
   - `pip install ibm-watsonx-ai` for `wx_connect.py` (SDK inventory).
-  - `pip install "ibm-watsonx-orchestrate==2.7.2"` for the `orchestrate` ADK
-    CLI. Pin it: the ADK must match the cluster's Orchestrate release, and 2.8.0+
-    can't manage agents on WXO 5.3.1. `python scripts/wxo_adk_check.py` checks
-    the installed one against the server.
+  - The `orchestrate` ADK CLI, pinned: it must match the cluster's Orchestrate
+    release, and 2.8.0+ can't manage agents on WXO 5.3.1. With
+    [uv](https://docs.astral.sh/uv/), `uv sync --group wxo` installs the pinned
+    version (Python 3.11–3.13) into this checkout's own `.venv`, away from the
+    system Python; run it as `uv run --group wxo orchestrate …`. Without uv,
+    `pip install "ibm-watsonx-orchestrate==2.7.2"`. Either way,
+    `scripts/wxo_adk_check.py` checks the installed one against the server.
 
   Both scripts tell you which package is missing and how to install it rather
   than failing with a traceback, and the skill checks before it picks a path.

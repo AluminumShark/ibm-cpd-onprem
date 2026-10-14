@@ -39,13 +39,19 @@ install. The other two control planes each need one package:
 |---|---|---|
 | REST (token, chat, inventory) | `python --version` | nothing to install |
 | watsonx.ai SDK (`wx_connect.py`) | `python -c "import ibm_watsonx_ai"` | `pip install ibm-watsonx-ai` |
-| Orchestrate ADK (`orchestrate ...`) | `python scripts/wxo_adk_check.py` | `pip install "ibm-watsonx-orchestrate==2.7.2"` (or the version IBM's matrix names for the cluster) |
+| Orchestrate ADK (`orchestrate ...`) | `uv run --group wxo python scripts/wxo_adk_check.py` | `uv sync --group wxo`; without uv, `pip install "ibm-watsonx-orchestrate==2.7.2"` |
 
 The ADK version must match the cluster, not be the latest: ADK 2.8.0+ breaks
 every `agents` command against WXO 5.3.1 (HTTP 500 — gotchas #11), while
 everything else keeps working. `wxo_adk_check.py` probes the server and says
 which case applies. Never suggest `pip install --upgrade ibm-watsonx-orchestrate`
 for an on-prem cluster without running it afterwards.
+
+Prefer the uv route: `pyproject.toml` pins the ADK in a `wxo` dependency group
+(Python 3.11–3.13), and `uv sync --group wxo` installs it into this checkout's
+own `.venv` — the system Python, and whatever LangChain or SaaS ADK it holds, is
+never touched. Then prefix every ADK command and every `wxo_*` script with
+`uv run --group wxo`, which puts the pinned `orchestrate` first on `PATH`.
 
 On macOS and most Linux the interpreter is `python3` and `pip` is
 `python3 -m pip` — use those wherever this skill writes `python` / `pip`.
@@ -168,11 +174,14 @@ raise "You must set the space/project id" otherwise.
 ### Point the ADK at this cluster
 ```bash
 export PYTHONIOENCODING=utf-8 PYTHONUTF8=1
-python scripts/wxo_adk_check.py   # check first: installed AND compatible with this server
-orchestrate env add -n cpd-onprem -u "$(python scripts/cpd_config.py get wxo_instance_url)" -t cpd --insecure
-orchestrate env activate cpd-onprem -u "$(python scripts/cpd_config.py get username)" -a "$CPD_API_KEY" --skip-version-check
-orchestrate models list
+uv sync --group wxo                                  # once: pinned ADK into this checkout's .venv
+uv run --group wxo python scripts/wxo_adk_check.py   # installed AND compatible with this server
+uv run --group wxo orchestrate env add -n cpd-onprem -u "$(python scripts/cpd_config.py get wxo_instance_url)" -t cpd --insecure
+uv run --group wxo orchestrate env activate cpd-onprem -u "$(python scripts/cpd_config.py get username)" -a "$CPD_API_KEY" --skip-version-check
+uv run --group wxo orchestrate models list
 ```
+Without uv, drop the `uv run --group wxo` prefix and use a pip-installed,
+pinned `orchestrate` instead.
 See the ADK reference for the full agent/tool build-import-remove loop and its
 sharp edges.
 

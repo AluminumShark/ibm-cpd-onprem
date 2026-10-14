@@ -6,8 +6,22 @@ and flags below are from ADK 2.7.2 (the same loop also passed on 1.12.0, 2.3.4
 and 2.6.1); check `--help` if your version differs.
 
 ## Install & verify the CLI first
+With uv (recommended) the ADK lives in this checkout's `.venv`, pinned by the
+`wxo` dependency group in `pyproject.toml` (Python 3.11–3.13, the ADK's own
+range), so it never collides with packages in the system Python:
 ```bash
-python scripts/wxo_adk_check.py   # installed AND compatible with this server?
+uv sync --group wxo                                  # once
+uv run --group wxo python scripts/wxo_adk_check.py   # installed AND compatible?
+uv run --group wxo orchestrate agents list           # prefix every ADK command
+```
+`uv run --group wxo` puts `.venv`'s `orchestrate` first on `PATH`, for the CLI
+and for the `wxo_*` scripts that call it. The commands below are written bare —
+add the prefix, or activate `.venv`. Pinning a different ADK means editing the
+`wxo` group and re-running `uv sync --group wxo`.
+
+Without uv:
+```bash
+python scripts/wxo_adk_check.py
 pip install "ibm-watsonx-orchestrate==2.7.2"   # only if the check says so
 ```
 `orchestrate: command not found` (PowerShell: `'orchestrate' is not recognized`)
@@ -35,7 +49,9 @@ probed against the server (`GET …/agents/external-chat?include=global`) and is
 reported `incompatible` when the server answers 500. `wxo_setup_agent.py` runs
 the same check before it creates anything.
 
-### Sharing one Python with other projects
+### Installing with pip into a shared Python
+None of this applies to the uv route above; it is what the project `.venv`
+avoids.
 - **LangChain 0.3 conflict.** ADK 2.x requires `langchain-core` 1.x (2.7.2 pins
   `~=1.4.0`). Installing it into a Python that also holds a LangChain 0.3 stack
   (`langchain`, `langchain-community`, `langchain-ibm`,
@@ -48,11 +64,13 @@ the same check before it creates anything.
   so the whole install fails. Install plain `ibm-watsonx-orchestrate==2.7.2`; only
   `orchestrate evaluations` needs the extra.
 - **Cloud and on-prem on one machine.** An IBM Cloud (SaaS) instance wants the
-  newest ADK, this cluster wants ≤ 2.7.2. Keep one of them in its own virtualenv
-  (`python -m venv .venv-wxo && .venv-wxo/bin/pip install
-  "ibm-watsonx-orchestrate==2.7.2"`; on Windows `.venv-wxo\Scripts\pip`) and run
-  that `orchestrate` for the cluster. The env list in `~/.config/orchestrate` is
-  shared, so `env activate` picks the target either way.
+  newest ADK, this cluster wants ≤ 2.7.2. The uv route already separates them:
+  the cluster's ADK sits in this checkout's `.venv` and wins on `PATH` inside
+  `uv run --group wxo`, so a newer `orchestrate` elsewhere (e.g. from
+  `uv tool install ibm-watsonx-orchestrate`) can serve the SaaS instance. With
+  pip only, give one of them its own virtualenv. The env list in
+  `~/.config/orchestrate` is shared, so `env activate` picks the target either
+  way.
 
 ## ALWAYS export this first
 ```bash

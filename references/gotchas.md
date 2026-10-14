@@ -108,12 +108,16 @@ Patch 5 — ignores the params on `/agents` but answers 500 on
 a JSON decode error).
 **Fix:** pin the ADK to the last release before workspaces, or to the version
 IBM's [on-prem compatibility matrix](https://developer.watson-orchestrate.ibm.com/environment/onprem_compatibility)
-names for your Software Hub release:
+names for your Software Hub release. The `wxo` dependency group in
+`pyproject.toml` already pins 2.7.2 into the project's `.venv`:
 ```bash
-pip install "ibm-watsonx-orchestrate==2.7.2"
-python scripts/wxo_adk_check.py        # -> [ok] ADK 2.7.2 predates workspaces
+uv sync --group wxo
+uv run --group wxo python scripts/wxo_adk_check.py   # -> [ok] ADK 2.7.2 predates workspaces
+# without uv:
+pip install "ibm-watsonx-orchestrate==2.7.2" && python scripts/wxo_adk_check.py
 ```
 An upgrade can leave a cloud-oriented ADK on `PATH` without anyone noticing, so
 run the check whenever the Orchestrate path misbehaves after a `pip install`.
 If the same machine also drives an IBM Cloud (SaaS) instance that needs a newer
-ADK, keep one of the two in its own virtualenv.
+ADK, the uv route keeps the two apart; with pip, give one of them its own
+virtualenv.
