@@ -34,6 +34,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import wxo_adk_check as adk       # noqa: E402
 import wxo_add_provider as prov   # noqa: E402  (secret handling lives here)
 import wxo_run_agent as runner    # noqa: E402
 
@@ -100,6 +101,15 @@ def _write_spec(tmpdir, name, spec, suffix):
 def do_setup(args) -> int:
     connection = args.connection or prov.default_connection(args.provider)
     provider_config = parse_provider_config(args.provider_config)
+
+    # 0. refuse an ADK this server can't serve before creating anything, or a
+    #    failed `agents import` would leave the connection + model behind.
+    status, msg = adk.check()
+    if status in ("incompatible", "missing"):
+        sys.stderr.write("[error] %s\n" % msg)
+        return 1
+    if status == "unknown":
+        sys.stderr.write("[warn] %s\n" % msg)
 
     # 1. connection + credentials (reads env/providers.env; no secret here)
     rc = prov.add_provider(args.provider, connection=connection,
