@@ -51,6 +51,8 @@ CPD deployment.
     system Python; run it as `uv run --group wxo orchestrate …`. Without uv,
     `pip install "ibm-watsonx-orchestrate==2.7.2"`. Either way,
     `scripts/wxo_adk_check.py` checks the installed one against the server.
+    Every pinned version and known conflict is listed under
+    [Versions](#versions).
 
   Both scripts tell you which package is missing and how to install it rather
   than failing with a traceback, and the skill checks before it picks a path.
@@ -263,17 +265,73 @@ ibm-cpd-onprem/
     └── wxo_run_agent.py     # invoke an agent over the runs API
 ```
 
-## Verified against
+## Versions
+
+The toolkit's own scripts need nothing beyond the standard library; every
+package version that matters is collected here — what this repo pins, what IBM
+pairs with each cluster release, and the conflicts found along the way.
+
+### What is pinned where
+
+| Package | Version | Installed by | Used for |
+|---|---|---|---|
+| Python | 3.8+ | — | auth, chat, config and `wxo_*` scripts (stdlib only) |
+| `ibm-watsonx-orchestrate` (ADK) | `==2.7.2`, needs Python 3.11–3.13 | `uv sync --group wxo` → this checkout's `.venv` (`wxo` group in `pyproject.toml`) | the `orchestrate` CLI and `wxo_setup_agent.py` |
+| `pytest` | `>=8` | `dev` group (`uv run` installs it) | offline tests |
+| `ibm-watsonx-ai` (SDK) | unpinned, tested 1.3.39 | `pip install ibm-watsonx-ai` | `wx_connect.py` |
+
+To move the ADK pin: edit the `wxo` group, run `uv lock` and
+`uv sync --group wxo`, then `uv run --group wxo python scripts/wxo_adk_check.py`.
+
+### ADK ↔ cluster release
+
+IBM's [on-prem compatibility matrix](https://developer.watson-orchestrate.ibm.com/environment/onprem_compatibility)
+(snapshot of 2026-10-14 — check the live page):
+
+| IBM Software Hub | ADK |
+|---|---|
+| 5.2.0 | 1.6.2 |
+| 5.2.0.1 | 1.6.x |
+| 5.2.1 | 1.8.x |
+| 5.2.2 | 1.12.x |
+| 5.3.0 | 1.14.x |
+| 5.3.1 | 2.3.x |
+| 5.3.1 Patch 2 | 2.7.x |
+| 5.3.1 Patch 5 | 2.10.x |
+| 5.4.0 | 2.11.x |
+| 5.4.2 | 2.12.x |
+
+Measured on this repo's WXO 5.3.1 cluster with the import → verify → remove
+loop:
+
+| ADK | Result |
+|---|---|
+| 1.12.0, 2.3.4, 2.6.1, 2.7.2 | pass |
+| 2.8.1, 2.17.0, 2.18.1 | every `agents` command fails with HTTP 500 — [gotchas #11](references/gotchas.md#11-adk-every-agents-command-fails-with-http-500) |
+
+### Known version conflicts
+
+| Conflict | Effect | Way out |
+|---|---|---|
+| ADK ≥ 2.8.0 vs WXO 5.3.1 (below Patch 5) | `agents list/import/export` → HTTP 500 | pin 2.7.2 (the `wxo` group does) |
+| ADK 2.x requires `langchain-core` 1.x | breaks a LangChain 0.3 stack in the same Python | keep the ADK in the project `.venv` |
+| `ibm-watsonx-orchestrate[agentops]==2.7.2` | pins the evaluation framework 1.3.9, whose install stopped on a Rust/Cargo build (Windows, Python 3.13) | install without the extra |
+| `ibm-watsonx-ai` 1.3.39 requires `pandas<2.3.0` | `pip check` conflict with pandas 2.3.x | stay on pandas 2.2.x |
+| `ibm-watsonx-ai` 1.3.39 vs a 5.3 backend | the SDK rejects `version="5.3"` | `wx_connect.py` falls back to 5.2 (below) |
+| SaaS and on-prem ADK on one machine | each needs a different version | on-prem in the project `.venv`; SaaS via `uv tool install ibm-watsonx-orchestrate` |
+
+### Verified against
 
 Everything here was exercised end to end against a live cluster, not inferred
 from docs. Other versions probably work; these are the ones actually tested.
 
 | Component | Tested |
 |---|---|
-| IBM Cloud Pak for Data backend | 5.3 |
+| IBM Cloud Pak for Data backend | 5.3 (watsonx Orchestrate 5.3.1, WML 5.3.2) |
 | `ibm-watsonx-ai` SDK | 1.3.39 (sends `version=5.2`, see below) |
-| `ibm-watsonx-orchestrate` ADK | 2.7.2 (also 1.12.0, 2.3.4, 2.6.1; 2.8.0+ fails, see gotchas #11) |
+| `ibm-watsonx-orchestrate` ADK | 2.7.2 (also 1.12.0, 2.3.4, 2.6.1; 2.8.0+ fails) |
 | Python | 3.8.20 and 3.13.7 (unit tests pass on both) |
+| uv | 0.11.1 |
 | Chat deployment | `openai/gpt-oss-120b` |
 
 The SDK validates the product version against a built-in list and rejects a
