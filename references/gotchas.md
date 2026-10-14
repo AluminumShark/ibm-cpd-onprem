@@ -91,3 +91,29 @@ as `pip3` / `python3 -m pip`.
 `wx_chat.sh` already try `python3`, then `python`, and use the first that runs
 Python 3.8+ — which also skips a Windows Store `python3` stub that does not.
 Set `CPD_PYTHON=/path/to/python` to choose one explicitly.
+
+## 11. ADK: every `agents` command fails with HTTP 500
+**Symptom:** `orchestrate agents list` (or `import`, `export`) dies with
+`500 Server Error … /v1/orchestrate/agents/external-chat?…&workspace_id=…&include=global`
+and `{"detail":"An Unexpected Error Occurred."}`, while `tools`, `models`,
+`connections`, `knowledge-bases` and `toolkits` keep working. `-k native` does
+not help: listing native agents still resolves their collaborators through the
+same endpoint.
+**Why:** ADK 2.8.0 added workspaces. From then on every agent lookup carries
+`include=global` (hard-coded default, no flag to turn it off) and the active
+workspace id. A server without workspace support — verified on WXO 5.3.1 below
+Patch 5 — ignores the params on `/agents` but answers 500 on
+`/agents/external-chat` and `/assistants/watsonx`. Its `/workspaces` and
+`/skills` routes don't exist either (the UI's HTML comes back, so the ADK reports
+a JSON decode error).
+**Fix:** pin the ADK to the last release before workspaces, or to the version
+IBM's [on-prem compatibility matrix](https://developer.watson-orchestrate.ibm.com/environment/onprem_compatibility)
+names for your Software Hub release:
+```bash
+pip install "ibm-watsonx-orchestrate==2.7.2"
+python scripts/wxo_adk_check.py        # -> [ok] ADK 2.7.2 predates workspaces
+```
+An upgrade can leave a cloud-oriented ADK on `PATH` without anyone noticing, so
+run the check whenever the Orchestrate path misbehaves after a `pip install`.
+If the same machine also drives an IBM Cloud (SaaS) instance that needs a newer
+ADK, keep one of the two in its own virtualenv.

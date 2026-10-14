@@ -39,7 +39,13 @@ install. The other two control planes each need one package:
 |---|---|---|
 | REST (token, chat, inventory) | `python --version` | nothing to install |
 | watsonx.ai SDK (`wx_connect.py`) | `python -c "import ibm_watsonx_ai"` | `pip install ibm-watsonx-ai` |
-| Orchestrate ADK (`orchestrate ...`) | `orchestrate --version` | `pip install ibm-watsonx-orchestrate` |
+| Orchestrate ADK (`orchestrate ...`) | `python scripts/wxo_adk_check.py` | `pip install "ibm-watsonx-orchestrate==2.7.2"` (or the version IBM's matrix names for the cluster) |
+
+The ADK version must match the cluster, not be the latest: ADK 2.8.0+ breaks
+every `agents` command against WXO 5.3.1 (HTTP 500 — gotchas #11), while
+everything else keeps working. `wxo_adk_check.py` probes the server and says
+which case applies. Never suggest `pip install --upgrade ibm-watsonx-orchestrate`
+for an on-prem cluster without running it afterwards.
 
 On macOS and most Linux the interpreter is `python3` and `pip` is
 `python3 -m pip` — use those wherever this skill writes `python` / `pip`.
@@ -162,7 +168,7 @@ raise "You must set the space/project id" otherwise.
 ### Point the ADK at this cluster
 ```bash
 export PYTHONIOENCODING=utf-8 PYTHONUTF8=1
-orchestrate --version || pip install ibm-watsonx-orchestrate   # check first
+python scripts/wxo_adk_check.py   # check first: installed AND compatible with this server
 orchestrate env add -n cpd-onprem -u "$(python scripts/cpd_config.py get wxo_instance_url)" -t cpd --insecure
 orchestrate env activate cpd-onprem -u "$(python scripts/cpd_config.py get username)" -a "$CPD_API_KEY" --skip-version-check
 orchestrate models list
@@ -196,5 +202,8 @@ sharp edges.
   the Windows region to English.
 - **`cpd-cli`** (platform admin) has no native Windows build — WSL only.
 - **`oc`/`kubectl`** need a kubeconfig bound to the cluster (cluster-admin).
+- **ADK 2.8.0+** can't manage agents on WXO 5.3.1 (below Patch 5): it sends
+  workspace params the server answers with HTTP 500. Pin 2.7.2, or follow IBM's
+  on-prem compatibility matrix; `scripts/wxo_adk_check.py` detects it.
 - The models visible in the ADK `models list` virtual catalog are not all
   deployed on watsonx.ai — only actually-deployed models can serve inference.

@@ -44,7 +44,10 @@ CPD deployment.
   bash 3.2 is enough — or use the PowerShell snippets in the references.
 - Optional, one package per extra path — neither is needed for auth or chat:
   - `pip install ibm-watsonx-ai` for `wx_connect.py` (SDK inventory).
-  - `pip install ibm-watsonx-orchestrate` for the `orchestrate` ADK CLI.
+  - `pip install "ibm-watsonx-orchestrate==2.7.2"` for the `orchestrate` ADK
+    CLI. Pin it: the ADK must match the cluster's Orchestrate release, and 2.8.0+
+    can't manage agents on WXO 5.3.1. `python scripts/wxo_adk_check.py` checks
+    the installed one against the server.
 
   Both scripts tell you which package is missing and how to install it rather
   than failing with a traceback, and the skill checks before it picks a path.
@@ -256,7 +259,7 @@ from docs. Other versions probably work; these are the ones actually tested.
 |---|---|
 | IBM Cloud Pak for Data backend | 5.3 |
 | `ibm-watsonx-ai` SDK | 1.3.39 (sends `version=5.2`, see below) |
-| `ibm-watsonx-orchestrate` ADK | 1.12.0 |
+| `ibm-watsonx-orchestrate` ADK | 2.7.2 (also 1.12.0, 2.3.4, 2.6.1; 2.8.0+ fails, see gotchas #11) |
 | Python | 3.8.20 and 3.13.7 (unit tests pass on both) |
 | Chat deployment | `openai/gpt-oss-120b` |
 

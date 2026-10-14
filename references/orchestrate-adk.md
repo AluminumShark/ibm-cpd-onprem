@@ -2,17 +2,57 @@
 
 CLI: `orchestrate` (pip package `ibm-watsonx-orchestrate`). Verified first-hand
 through a full import→verify→remove cycle on a live CPD instance. Command surface
-and flags below are from ADK v1.12.0; check `--help` if your version differs.
+and flags below are from ADK 2.7.2 (the same loop also passed on 1.12.0, 2.3.4
+and 2.6.1); check `--help` if your version differs.
 
 ## Install & verify the CLI first
 ```bash
-orchestrate --version          # "ADK Version: 1.12.0" -> already installed
-pip install ibm-watsonx-orchestrate
+python scripts/wxo_adk_check.py   # installed AND compatible with this server?
+pip install "ibm-watsonx-orchestrate==2.7.2"   # only if the check says so
 ```
 `orchestrate: command not found` (PowerShell: `'orchestrate' is not recognized`)
 means the package is absent, not that the cluster is down. After installing,
 open a new shell so the console script lands on `PATH`. Nothing else in this
 toolkit needs the ADK — only the Orchestrate path does.
+
+## The ADK version must match the cluster — never `pip install --upgrade` blindly
+The ADK tracks IBM's SaaS, and on-prem servers lag it. IBM publishes the ADK to
+use for each Software Hub release in its
+[on-prem compatibility matrix](https://developer.watson-orchestrate.ibm.com/environment/onprem_compatibility)
+(5.3.0 → 1.14.x, 5.3.1 → 2.3.x, 5.3.1 Patch 2 → 2.7.x, Patch 5 → 2.10.x,
+5.4.0 → 2.11.x, …).
+
+The hard edge, verified on WXO 5.3.1: **ADK 2.8.0 and later break every
+`agents` command** (`list`, `import`, `export`) with HTTP 500 — see
+[gotchas #11](gotchas.md#11-adk-every-agents-command-fails-with-http-500).
+Tools, models, connections, knowledge bases and toolkits still work, which makes
+the failure look random. Pin `2.7.2` (the last release before workspaces) unless
+the matrix names a newer ADK for your release.
+
+`scripts/wxo_adk_check.py` tells the two cases apart without guessing from
+version numbers: an ADK older than 2.8.0 passes straight away; a newer one is
+probed against the server (`GET …/agents/external-chat?include=global`) and is
+reported `incompatible` when the server answers 500. `wxo_setup_agent.py` runs
+the same check before it creates anything.
+
+### Sharing one Python with other projects
+- **LangChain 0.3 conflict.** ADK 2.x requires `langchain-core` 1.x (2.7.2 pins
+  `~=1.4.0`). Installing it into a Python that also holds a LangChain 0.3 stack
+  (`langchain`, `langchain-community`, `langchain-ibm`,
+  `langchain-text-splitters` 0.3.x) leaves `pip check` reporting conflicts, and
+  that stack may break. To keep both in one interpreter, either move that stack
+  to LangChain 1.x or stay on ADK 1.x (1.12.0 also passes the loop here).
+- **Skip the `[agentops]` extra.** On 2.7.2 it pins
+  `ibm-watsonx-orchestrate-evaluation-framework==1.3.9`; installing it stopped on
+  a dependency that needs Rust/Cargo to compile (seen on Windows, Python 3.13),
+  so the whole install fails. Install plain `ibm-watsonx-orchestrate==2.7.2`; only
+  `orchestrate evaluations` needs the extra.
+- **Cloud and on-prem on one machine.** An IBM Cloud (SaaS) instance wants the
+  newest ADK, this cluster wants ≤ 2.7.2. Keep one of them in its own virtualenv
+  (`python -m venv .venv-wxo && .venv-wxo/bin/pip install
+  "ibm-watsonx-orchestrate==2.7.2"`; on Windows `.venv-wxo\Scripts\pip`) and run
+  that `orchestrate` for the cluster. The env list in `~/.config/orchestrate` is
+  shared, so `env activate` picks the target either way.
 
 ## ALWAYS export this first
 ```bash
@@ -22,10 +62,12 @@ The ADK prints model names containing emoji/CJK; without UTF-8 the command crash
 mid-output with `UnicodeEncodeError` on non-English Windows consoles. The
 server-side action may still have happened — re-run a read-only `list` to check.
 
-## Command surface (v1.12.0)
+## Command surface (v2.7.2)
 `env`, `agents`, `tools`, `toolkits`, `knowledge-bases`, `connections`,
-`voice-configs`, `server`, `chat`, `models`, `channels`, `evaluations`,
-`copilot`, `settings`, `partners`.
+`voice-configs`, `server`, `chat`, `models`, `channels`, `phone`, `evaluations`,
+`settings`, `partners`, `observability`. (`copilot` existed in 1.x and is gone
+in 2.x; `skills` and `workspaces` arrive in later 2.x releases and have no
+server side on WXO 5.3.1.)
 
 Agent attributes: style ∈ `default | react | planner`; kind ∈
 `native | external | assistant`; tool permission ∈
@@ -190,7 +232,7 @@ instructions: You are a helpful assistant. Answer directly and concisely.
 YAML
 orchestrate agents import -f agent.yaml
 ```
-`set-credentials` (ADK v1.12.0) has **no file/stdin option** — the secret is only
+`set-credentials` (ADK 1.12.0 through 2.18.1) has **no file/stdin option** — the secret is only
 accepted on argv (`-e key=value`, `--api-key`, …), so it is briefly visible to a
 local `ps` while the child runs. `wxo_add_provider.py` reads the value from
 `providers.env`/env, never echoes it, and scrubs it from captured output; prefer

@@ -8,7 +8,7 @@ wins, then the file), checks every required field is present, then hands the
 value to the ADK once. It never prints, logs, or returns the value; on a missing
 field it names the environment-variable NAME only.
 
-Secret-input note (ADK v1.12.0): `orchestrate connections set-credentials` has no
+Secret-input note (ADK 1.12.0-2.18.1): `orchestrate connections set-credentials` has no
 file/stdin option — only `-e <key>=<value>` (and `--api-key` etc.), all on argv.
 So a key_value secret is briefly visible to a local `ps` while the child runs.
 This is local, single-user and short-lived; we never echo it and we scrub it from
