@@ -33,6 +33,9 @@ LAST_PRE_WORKSPACE = "2.7.2"       # newest ADK verified against WXO 5.3.1
 MATRIX_URL = ("https://developer.watson-orchestrate.ibm.com/environment/"
               "onprem_compatibility")
 PROBE = "/v1/orchestrate/agents/external-chat?include=global"
+INSTALL = ("    uv sync --group wxo    # pinned in pyproject.toml, into this checkout's .venv\n"
+           '    pip install "ibm-watsonx-orchestrate==%s"    # without uv'
+           % LAST_PRE_WORKSPACE)
 
 
 def parse_adk_version(text: str):
@@ -57,8 +60,7 @@ def check(orchestrate="orchestrate", cfg=None):
     ver = adk_version(orchestrate)
     if ver is None:
         return "missing", ("the orchestrate CLI is not installed (or prints no ADK "
-                           "version). Install it with: pip install "
-                           '"ibm-watsonx-orchestrate==%s"' % LAST_PRE_WORKSPACE)
+                           "version). Install it with:\n" + INSTALL)
     shown = ".".join(map(str, ver))
     if ver < WORKSPACE_ADK:
         return "ok", "ADK %s predates workspaces; compatible." % shown
@@ -77,9 +79,9 @@ def check(orchestrate="orchestrate", cfg=None):
             "ADK %s sends include=global/workspace_id on agent lookups, and this "
             "Orchestrate server answers HTTP 500 to them — agents list/import/"
             "export will fail. Pin the ADK to the last release before workspaces:\n"
-            '    pip install "ibm-watsonx-orchestrate==%s"\n'
+            "%s\n"
             "or the version IBM lists for your Software Hub release: %s"
-            % (shown, LAST_PRE_WORKSPACE, MATRIX_URL))
+            % (shown, INSTALL, MATRIX_URL))
     return "unknown", ("ADK %s: compatibility probe returned HTTP %s; could not "
                        "verify. See %s" % (shown, code, MATRIX_URL))
 

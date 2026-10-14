@@ -1,6 +1,9 @@
 # The toolkit itself has NO runtime dependencies — the auth, chat and config
 # scripts are standard-library only, and that promise is part of the design.
-# Everything below is for development and testing only.
+# The groups below are opt-in tooling: `dev` for the tests, `wxo` for the
+# Orchestrate ADK CLI. `wxo` is pinned to what the target cluster accepts (see
+# references/orchestrate-adk.md) and lives in the project's .venv, so it never
+# clashes with whatever the system Python already holds.
 [project]
 name = "ibm-cpd-onprem"
 version = "0.1.0"
@@ -10,9 +13,13 @@ dependencies = []
 
 [dependency-groups]
 dev = ["pytest>=8"]
+wxo = ["ibm-watsonx-orchestrate==2.7.2"]
 
 [tool.uv]
 package = false
+
+[tool.uv.dependency-groups]
+wxo = { requires-python = ">=3.11,<3.14" }   # the ADK's own Python range
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
