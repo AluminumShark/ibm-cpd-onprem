@@ -20,151 +20,121 @@ description: >-
 A portable toolkit for driving any on-prem CPD / IBM Software Hub deployment.
 Nothing is hard-coded to one cluster: URL, credentials and IDs come from a
 per-machine config or `CPD_*` env vars. The endpoints, flags and gotchas were
-verified by direct calls against a real cluster, not taken from generic docs.
-
-Three control planes, each a thin client that calls the cluster over HTTPS REST
-(the models, agents and data all live server-side):
+verified against a real cluster. Three control planes, each a thin HTTPS
+client of the cluster:
 
 1. **REST API** + a CPD bearer token — covers everything (auth, chat, inventory).
-2. **`orchestrate` ADK CLI** — manages watsonx Orchestrate (agents, tools, models, knowledge bases).
-3. **`ibm_watsonx_ai` Python SDK** — manages watsonx.ai + Watson Machine Learning.
+2. **`orchestrate` ADK CLI** — watsonx Orchestrate (agents, tools, models, knowledge bases).
+3. **`ibm_watsonx_ai` Python SDK** — watsonx.ai + Watson Machine Learning.
 
 ## Where commands run: `$S`
 
 The shell usually sits in the user's own project, not in this skill, so every
-command here addresses the skill through `S`, its base directory — Claude Code
+command addresses the skill through `S`, its base directory — Claude Code
 prints it as "Base directory for this skill" when the skill loads. Set it with
 single quotes (Windows paths keep their backslashes), in the same command that
 uses it: shell state does not carry over between Bash calls.
 
 ```bash
 S='<this skill base directory>'
-export PYTHONIOENCODING=utf-8 PYTHONUTF8=1      # see the first gotcha below
+export PYTHONIOENCODING=utf-8 PYTHONUTF8=1      # see "Two gotchas" below
 python "$S/scripts/cpd_config.py" show
 ```
 
-A bare `scripts/...` path resolves against the user's project and fails. The
-references follow the same convention.
+A bare `scripts/...` path resolves against the user's project and fails; the
+references follow the same convention. On macOS and most Linux read `python` /
+`pip` as `python3` / `python3 -m pip`; the `.sh` scripts find a working Python
+themselves (`CPD_PYTHON` overrides).
 
 ## Prerequisites: check the path you need, install on demand
 
-Only Python 3.8+ and `curl` are always required — `cpd_config.py`,
-`cpd_token.sh` and `wx_chat.sh` are standard-library only and never need a pip
-install. The other two control planes each need one package:
+Python 3.8+ and `curl` cover the REST path — `cpd_config.py`, `cpd_token.sh`
+and `wx_chat.sh` are standard-library only. The other two paths each need one
+package:
 
 | Path | Check first | If the check fails |
 |---|---|---|
-| REST (token, chat, inventory) | `python --version` | nothing to install |
 | watsonx.ai SDK (`wx_connect.py`) | `python -c "import ibm_watsonx_ai"` | `pip install ibm-watsonx-ai` |
-| Orchestrate ADK (`orchestrate ...`) | `uv run --project "$S" --group wxo python "$S/scripts/wxo_adk_check.py"` | `uv sync --project "$S" --group wxo`; without uv, `pip install "ibm-watsonx-orchestrate==2.7.2"` |
+| Orchestrate ADK | `uv run --project "$S" --group wxo python "$S/scripts/wxo_adk_check.py"` | no `uv`: `pip install "ibm-watsonx-orchestrate==2.7.2"`, then the check with plain `python` |
 
-Run the check before the first command of a path, not after a failure —
-`orchestrate: command not found` and a `ModuleNotFoundError` traceback both read
-as "the cluster is broken" to a user who does not know a package is missing.
-When a check fails, say plainly what is missing, give the one-line install
-command, and ask before running it — installing into the user's Python
-environment is their call. If they would rather not install anything, the REST
-path in [references/rest-api.md](references/rest-api.md) covers auth, chat and
-inventory with nothing but `curl`.
-
-On macOS and most Linux the interpreter is `python3` and `pip` is
-`python3 -m pip` — use those wherever this skill writes `python` / `pip`.
-`cpd_token.sh` and `wx_chat.sh` pick a working `python3` or `python` on their
-own; `CPD_PYTHON` overrides the choice.
+Run the check before the first command of a path — `orchestrate: command not
+found` or a `ModuleNotFoundError` reads as "the cluster is broken" to a user
+who doesn't know a package is missing. When it fails, name what is missing,
+give the one-line install, and ask before running it: the user's Python
+environment is theirs. The uv route never touches it, but any
+`uv run --group wxo` — the check included — first syncs the pinned ADK into
+the skill's own `.venv`, a sizeable one-time download; say so before the first
+ADK command on a machine. Rather not install anything? The REST path in
+[references/rest-api.md](references/rest-api.md) needs only `curl`.
 
 ### The ADK: pinned, in the skill's own `.venv`
 
-The ADK version must match the cluster, not be the latest: ADK 2.8.0+ breaks
-every `agents` command against WXO 5.3.1 (HTTP 500 — gotchas #11) while
-everything else keeps working. `wxo_adk_check.py` probes the server and says
-which case applies. Never suggest `pip install --upgrade ibm-watsonx-orchestrate`
-for an on-prem cluster without running the check afterwards.
-
-`pyproject.toml` pins the ADK in a `wxo` dependency group (Python 3.11–3.13),
-and `uv sync --project "$S" --group wxo` installs it into the skill's own
-`.venv` — the system Python, and whatever LangChain or SaaS ADK it holds, is
-never touched. Run every ADK command, and every `wxo_*` script that calls it,
-as `uv run --project "$S" --group wxo …`, which puts the pinned `orchestrate`
-first on `PATH`. **Never drop `--project "$S"`**: outside this project uv
-ignores `--group wxo` with only a warning and runs whatever `orchestrate` is on
-`PATH` — often a newer, SaaS-oriented ADK that fails against WXO 5.3.1.
+The ADK must match the cluster, not be the latest: 2.8.0+ breaks every
+`agents` command on WXO 5.3.1 (HTTP 500 — gotchas #11) while the rest keeps
+working. `pyproject.toml` pins 2.7.2 in a `wxo` dependency group (Python
+3.11–3.13); `uv sync --project "$S" --group wxo` installs it into the skill's
+own `.venv`, leaving the system Python untouched. Run every ADK command, and
+every `wxo_*` script that calls it, as `uv run --project "$S" --group wxo …`
+(`wxo_run_agent.py` is plain REST and needs no prefix).
+**Never drop `--project "$S"`**: outside this project uv ignores `--group wxo`
+with only a warning and runs whatever `orchestrate` is on `PATH` — often a
+newer, SaaS-oriented ADK. Never suggest
+`pip install --upgrade ibm-watsonx-orchestrate` for this cluster without
+re-running the check.
 
 ## First run on any machine: the user runs `cpd_init.py`
 
-Nothing is hard-coded to a specific cluster. The setup wizard verifies the
-credentials, discovers the cluster's own space / deployment / project / WXO
-IDs, and writes `~/.config/cpd-onprem/config.json` (git-ignored, chmod 600).
-
-The wizard is **interactive** (prompts, a hidden key prompt, pickers), so
-Claude cannot run it — on a non-interactive shell it dies with `EOFError`.
-When `python "$S/scripts/cpd_config.py" show` finds no config file and no
-`CPD_*` values, stop and give the user the command to run in **their own
-terminal**, with the real skill path filled in:
+The setup wizard verifies the credentials, discovers the cluster's space /
+deployment / project / WXO IDs, and writes the config file — `$CPD_CONFIG`
+when set (a second cluster: run it with that variable set), else
+`~/.config/cpd-onprem/config.json` — git-ignored, chmod 600. It is
+**interactive**, so Claude cannot run it — on a non-interactive shell it dies
+with `EOFError`. When `python "$S/scripts/cpd_config.py" show` comes back
+without a `url`, `username` or `api_key`, stop and give the user this command
+for **their own terminal**, with the real path filled in:
 
 ```bash
 python "<skill base directory>/scripts/cpd_init.py"
 ```
 
-Tell them that answering **y** at "Store the API key in the config file?" lets
-this session use the key straight away. With N, the key must come from
-`CPD_API_KEY` in the environment Claude Code was started from — set it
-persistently and restart Claude Code; an `export` in another terminal never
-reaches this session.
+Answering **y** at "Store the API key in the config file?" lets this session
+use the key at once. With N, the key must come from `CPD_API_KEY` in the
+environment Claude Code was started from — set it persistently (Windows:
+`[Environment]::SetEnvironmentVariable('CPD_API_KEY', '<key>', 'User')` in
+their own PowerShell) and restart Claude Code; an `export` in another terminal
+never reaches this session. The same holds for `CPD_CONFIG`.
 
 **Never ask the user to paste an API key or password into the chat**, and
 never type one into a command. Keys reach the scripts only through the config
-file or `CPD_API_KEY`.
+file or `CPD_API_KEY`. **External-provider keys** (Anthropic, OpenAI, Gemini…
+backing a WXO agent) live apart in `~/.config/cpd-onprem/providers.env` (chmod
+600; override `$WXO_PROVIDERS_ENV`) as `WXO_<PROVIDER>_<FIELD>` lines or env
+vars — see `providers.env.example` — never in `config.json` or the repo.
 
-**External-provider keys** (for backing a WXO native agent with Anthropic,
-OpenAI, Gemini…) live separately in `providers.env` — default
-`~/.config/cpd-onprem/providers.env` (chmod 600, git-ignored), override
-`$WXO_PROVIDERS_ENV` — as `WXO_<PROVIDER>_<FIELD>` lines, or the same env vars.
-See `providers.env.example`; never put a provider key in `config.json` or the
-repo. A real env var overrides the file, same as `config.json`.
-
-### How settings resolve (every script obeys this)
-`scripts/cpd_config.py` is the single source of truth. For each setting it takes
-the first available of: **explicit arg → `CPD_*` environment variable → config
-file**. So env vars always override the file (handy for CI or a second cluster):
-
-| Setting | Env var |
-|---|---|
-| cluster URL | `CPD_URL` |
-| username | `CPD_USERNAME` |
-| API key | `CPD_API_KEY` |
-| default space | `CPD_SPACE_ID` |
-| default project | `CPD_PROJECT_ID` |
-| default deployment | `CPD_DEPLOYMENT_ID` |
-| WXO instance URL | `CPD_WXO_INSTANCE_URL` |
-| verify TLS | `CPD_VERIFY_SSL` (default off — self-signed) |
-| CA bundle | `CPD_CA_BUNDLE` (PEM for a private CA; used while verifying) |
-
-Which config file? `$CPD_CONFIG` when set — even before that file exists,
-nothing else is read, and the wizard creates it there. Otherwise the first of
-`config.json` in the skill folder, then `~/.config/cpd-onprem/config.json`.
-`show` names the one actually read, so when a value looks stale, check that
-line before assuming the cluster is wrong.
-
-Quick checks: `python "$S/scripts/cpd_config.py" show` (resolved settings, key
-masked), `python "$S/scripts/cpd_config.py" token` (a bearer token).
-`get api_key` is refused without `--reveal`, so it cannot land in a transcript
-by accident.
+### How settings resolve
+`scripts/cpd_config.py` is the single source of truth: every script takes the
+first of **explicit arg → `CPD_*` env var → config file**, over `CPD_URL`,
+`CPD_USERNAME`, `CPD_API_KEY`, `CPD_SPACE_ID`, `CPD_PROJECT_ID`,
+`CPD_DEPLOYMENT_ID`, `CPD_WXO_INSTANCE_URL`, `CPD_VERIFY_SSL` (default off —
+self-signed), `CPD_CA_BUNDLE` (PEM for a private CA) and `CPD_VERSION` (the
+product version the SDK sends). The config file is `$CPD_CONFIG` when set — the
+only one read, even before it exists — else `config.json` in the skill folder,
+else `~/.config/cpd-onprem/config.json`. `show` names the file actually read;
+check it before blaming the cluster for a stale value. `token` prints a bearer
+token; `get api_key` is refused without `--reveal`, so the key cannot land in
+a transcript by accident.
 
 ## Two gotchas that bite on EVERY path
 
-1. **Windows console encoding.** On a non-English Windows box the console codepage
-   (e.g. `cp950` on zh-TW) crashes with `UnicodeEncodeError` the moment a tool
-   prints an emoji or CJK — and the ADK and model names do. **Always** export
-   first:
-   ```bash
-   export PYTHONIOENCODING=utf-8 PYTHONUTF8=1
-   ```
-   PowerShell: `$env:PYTHONIOENCODING="utf-8"; $env:PYTHONUTF8="1"`. The bundled
-   scripts already set this; set it yourself for ad-hoc `orchestrate`/`python`.
-2. **Self-signed TLS.** On-prem clusters usually use a self-signed cert: `curl`
-   needs `-k`, the ADK needs `--insecure`, the SDK needs `verify=False`
-   (`verify_ssl: false` is the default here). Flip to verify once a real CA is in
-   place.
+1. **Windows console encoding.** A non-English console codepage (e.g. `cp950`
+   on zh-TW) crashes with `UnicodeEncodeError` when a tool prints emoji or CJK
+   — and the ADK and model names do. Always
+   `export PYTHONIOENCODING=utf-8 PYTHONUTF8=1` first (PowerShell:
+   `$env:PYTHONIOENCODING="utf-8"; $env:PYTHONUTF8="1"`). The bundled scripts
+   set it themselves.
+2. **Self-signed TLS.** `curl` needs `-k`, the ADK `--insecure`, the SDK
+   `verify=False` (`verify_ssl: false` is the default here). Flip to verify
+   once a real CA is in place.
 
 ## Choosing a path
 
@@ -183,30 +153,24 @@ inventory) plus `uv run --project "$S" --group wxo orchestrate agents list`
 
 ## Quick starts (the 80% cases)
 
-### Chat with a deployed model (one call)
+### Chat with a deployed model
 ```bash
 bash "$S/scripts/wx_chat.sh" "Introduce yourself in one sentence."
 ```
-Resolves URL + token + deployment from config (auto-discovers a ready deployment
-if none is set). Under the hood:
-`POST {url}/ml/v1/deployments/{id}/text/chat?version=2024-05-01` with body
-`{"messages":[...]}` **only** — extra top-level fields like `max_tokens` return
-HTTP 400 (`json_validation_error`); the allowed siblings are `context`, `tools`,
-`tool_choice`, `tool_choice_option`. Responses carry
-`choices[0].message.content` plus a separate `reasoning_content` (chain-of-thought
-— strip it for end users).
+Resolves URL, token and deployment and prints the answer. The deployment is
+the configured one, else the first ready one in the space; to pick a model,
+pass its deployment id as a second argument (`wx_connect.py` lists them). Calling `/text/chat` yourself: the body may hold only `messages`
+(plus `context`, `tools`, `tool_choice`, `tool_choice_option`) — `max_tokens`
+and the like return HTTP 400 — and strip `reasoning_content` before showing
+users the reply ([rest-api.md](references/rest-api.md)).
 
-### Connect the SDK (read or manage watsonx.ai/WML)
-Needs `ibm-watsonx-ai`; `wx_connect.py` prints the install command if it is absent.
+### Connect the SDK
 ```bash
-export PYTHONIOENCODING=utf-8 PYTHONUTF8=1
 python "$S/scripts/wx_connect.py"
 ```
-The script handles the **product-version pitfall**: if the backend is newer than
-the installed SDK (e.g. 5.3 backend, SDK that tops out at 5.2) the SDK rejects
-`version="5.3"`, so it falls back to the SDK's highest supported value (identical
-API behaviour). It also sets the default space before any catalog call — those
-raise "You must set the space/project id" otherwise.
+Prints a read-only inventory. It falls back to the SDK's highest supported
+product version when the cluster is newer (gotchas #4) and sets the default
+space before catalog calls (#5).
 
 ### Point the ADK at this cluster
 ```bash
@@ -218,15 +182,12 @@ uv run --project "$S" --group wxo python "$S/scripts/wxo_env_activate.py"   # en
 uv run --project "$S" --group wxo orchestrate models list
 ```
 `wxo_env_activate.py` reads the WXO URL, username and API key through
-`cpd_config.py`, so it works whether the key is in `CPD_API_KEY` or stored by
-the wizard. It answers `env add`'s "update the environment? (Y/n)" on a re-run
-and never prints the key. Do not hand-write
-`orchestrate env activate … -a "$CPD_API_KEY"`: it covers only the env-var
-case, and an empty `-a` drops the ADK into a getpass prompt that hangs.
-
-Without uv, drop the `uv run --project "$S" --group wxo` prefix and use a
-pip-installed, pinned `orchestrate` instead. See the ADK reference for the full
-agent/tool build-import-remove loop and its sharp edges.
+`cpd_config.py` — key in `CPD_API_KEY` or stored by the wizard — answers
+`env add`'s "update the environment? (Y/n)" on a re-run, and never prints the
+key. Don't hand-write `orchestrate env activate … -a "$CPD_API_KEY"`: it covers
+only the env-var case, and an empty `-a` drops the ADK into a getpass prompt
+that hangs. Without uv, drop the prefix and use a pip-installed, pinned
+`orchestrate`. The ADK reference has the full build-import-remove loop.
 
 ## Safety rails
 
@@ -239,20 +200,15 @@ agent/tool build-import-remove loop and its sharp edges.
 - Prefer read-only getters (`get_details`, `list`, `*_model_specs`) for
   inventory; reserve create/import/deploy/remove for explicit requests.
 - Secrets flow through env vars / a chmod-600 config, never into the repo or
-  chat. If a key is ever pasted somewhere shared, advise rotating it.
-- **Never read, print, echo, or inline an external-provider API key** (Anthropic,
-  OpenAI, Gemini, Bedrock…). Supply it only via `providers.env` / `WXO_*` env
-  vars and let `scripts/wxo_add_provider.py` set it on the connection. If a
-  provider key is pasted into chat, treat it as compromised and tell the user to
-  rotate it.
+  chat. A CPD key or password pasted into chat, or anywhere shared, is
+  compromised: don't use it, and advise rotating it in the CPD profile page.
+- **Never read, print, echo, or inline an external-provider API key.** Let
+  `wxo_add_provider.py` set it from `providers.env` / `WXO_*` env vars. A
+  provider key pasted into chat is compromised — tell the user to rotate it.
 
-## Known limitations (see gotchas.md for fixes)
+## Known limitations
 
-- **`cpdctl`** (project export/import, job scheduling) panics on launch on
-  non-English Windows regional locales (it maps the locale to a translation file
-  it doesn't bundle and ignores `LANG`). Use it under WSL, or temporarily switch
-  the Windows region to English.
-- **`cpd-cli`** (platform admin) has no native Windows build — WSL only.
-- **`oc`/`kubectl`** need a kubeconfig bound to the cluster (cluster-admin).
-- The models visible in the ADK `models list` virtual catalog are not all
-  deployed on watsonx.ai — only actually-deployed models can serve inference.
+`cpdctl` panics on launch on non-English Windows locales (gotchas #7 — use
+WSL); `cpd-cli` has no native Windows build (WSL only); `oc`/`kubectl` need a
+cluster-admin kubeconfig; and the ADK `models list` catalog includes models
+that are not deployed on watsonx.ai — only deployed ones can serve inference.

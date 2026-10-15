@@ -16,7 +16,7 @@ spec's provider_config via --provider-config KEY=VALUE.
 CLI:
     python wxo_setup_agent.py --provider google --model gemini-2.5-flash \\
         --agent-name zytest_gemini --test "Reply with exactly: PONG"
-    python wxo_setup_agent.py --provider anthropic --model claude-3-5-sonnet-20241022 \\
+    python wxo_setup_agent.py --provider anthropic --model claude-sonnet-5-5 \\
         --agent-name zytest_claude
     python wxo_setup_agent.py --provider ollama --model llama3.1 \\
         --agent-name zytest_ollama --provider-config custom_host=http://ollama:11434/v1
@@ -184,7 +184,7 @@ def main(argv) -> int:
     p.add_argument("--provider", required=True,
                    help="provider id, e.g. anthropic, openai, google, bedrock, ollama")
     p.add_argument("--model", required=True,
-                   help="provider model id, e.g. claude-3-5-sonnet-20241022")
+                   help="provider model id, e.g. claude-sonnet-5-5")
     p.add_argument("--agent-name", required=True, help="name for the native agent")
     p.add_argument("--instructions", default=None, help="agent instructions")
     p.add_argument("--connection", default=None, help="connection id; default wxo_<provider>")

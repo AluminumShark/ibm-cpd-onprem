@@ -244,12 +244,13 @@ also names a provider's required fields in its output. Secrets are supplied via
 export PYTHONIOENCODING=utf-8 PYTHONUTF8=1
 # put WXO_<PROVIDER>_API_KEY in providers.env (chmod 600) or the environment first
 uv run --project "$S" --group wxo python "$S/scripts/wxo_setup_agent.py" \
-    --provider anthropic --model claude-3-5-sonnet-20241022 \
+    --provider anthropic --model claude-sonnet-5-5 \
     --agent-name zytest_claude --test "Reply with exactly: PONG"
 ```
 It ensures the connection + credentials (`wxo_add_provider.py`, the only code that
 touches the plaintext key), imports the model and a native agent, and — with
-`--test` — invokes it. Self-hosted example:
+`--test` — invokes it. `--model` reaches the provider unchanged, so use an id
+it currently serves; the ids here were current in October 2026. Self-hosted example:
 ```bash
 uv run --project "$S" --group wxo python "$S/scripts/wxo_setup_agent.py" \
     --provider ollama --model llama3.1 --agent-name zytest_ollama \
@@ -270,8 +271,8 @@ orchestrate connections set-credentials -a wxo_anthropic --env draft -e "api_key
 
 # 2. model spec -> import (name gets the virtual-model/ prefix; anthropic gets max_tokens=4096)
 cat > model.json <<'JSON'
-{ "spec_version": "v1", "name": "virtual-model/anthropic/claude-3-5-sonnet-20241022",
-  "display_name": "Claude 3.5 Sonnet", "description": "Claude via the AI Gateway",
+{ "spec_version": "v1", "name": "virtual-model/anthropic/claude-sonnet-5-5",
+  "display_name": "Claude Sonnet 5.5", "description": "Claude via the AI Gateway",
   "model_type": "chat" }
 JSON
 orchestrate models import -f model.json --app-id wxo_anthropic
@@ -282,7 +283,7 @@ spec_version: v1
 kind: native
 name: zytest_claude
 description: Native agent backed by Claude.
-llm: virtual-model/anthropic/claude-3-5-sonnet-20241022
+llm: virtual-model/anthropic/claude-sonnet-5-5
 style: default
 instructions: You are a helpful assistant. Answer directly and concisely.
 YAML
@@ -310,11 +311,11 @@ take the last `role == "assistant"` message's text parts.
 ### Cleanup (reverse order)
 ```bash
 uv run --project "$S" --group wxo python "$S/scripts/wxo_setup_agent.py" \
-    --provider anthropic --model claude-3-5-sonnet-20241022 \
+    --provider anthropic --model claude-sonnet-5-5 \
     --agent-name zytest_claude --cleanup
 # equivalently, by hand — agent depends on the model, remove it first:
 orchestrate agents remove -n zytest_claude -k native
-orchestrate models remove -n virtual-model/anthropic/claude-3-5-sonnet-20241022
+orchestrate models remove -n virtual-model/anthropic/claude-sonnet-5-5
 orchestrate connections remove -a wxo_anthropic
 orchestrate agents list   # confirm nothing zytest_ remains
 ```
