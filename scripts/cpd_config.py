@@ -69,14 +69,34 @@ def config_candidates():
 
 
 def active_config():
-    """The config file actually in effect, or None when running on env vars."""
+    """The config file actually in effect, or None when running on env vars.
+
+    An explicit $CPD_CONFIG is authoritative even before the file exists:
+    falling through to another file would quietly talk to a different cluster,
+    and let cpd_init.py save the new cluster's settings over the old one's.
+    """
+    override = os.environ.get("CPD_CONFIG")
     for p in config_candidates():
         try:
             if p.is_file():
                 return p
         except OSError:
-            continue
+            pass
+        if override:
+            _warn_once("missing-override", (
+                "[warn] CPD_CONFIG points at %s, which does not exist — using "
+                "CPD_* env vars only. Run cpd_init.py to create it.\n" % p))
+            return None
     return None
+
+
+def write_target() -> Path:
+    """Where cpd_init.py saves: $CPD_CONFIG when set (even if not created yet),
+    else the file already in effect, else the user config."""
+    override = os.environ.get("CPD_CONFIG")
+    if override:
+        return Path(override).expanduser()
+    return active_config() or CONFIG_PATH
 
 
 def _gitignore_shields_config() -> bool:
@@ -251,7 +271,7 @@ def main(argv):
     cmd = argv[0]
     cfg = load_file()
     if cmd == "path":
-        print(active_config() or CONFIG_PATH)
+        print(write_target())
     elif cmd == "show":
         out = {k: (get(k, cfg) or "") for k in ENV}   # unset reads as "", not null
         out["api_key"] = _mask(out.get("api_key"))

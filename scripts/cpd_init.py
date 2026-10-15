@@ -89,7 +89,10 @@ def carry_over(existing: dict, url: str) -> dict:
 
 def main():
     print("=== IBM Cloud Pak for Data — connection setup ===\n")
-    existing = C.load_file()
+    # Read and write the same file — $CPD_CONFIG when set, even before it
+    # exists — so another cluster's config is neither pre-filled nor overwritten.
+    target = C.write_target()
+    existing = C.load_file(target)
 
     url = ask("Cluster URL", existing.get("url") or os.environ.get("CPD_URL"))
     existing = carry_over(existing, url)   # a new cluster invalidates old ids
@@ -182,9 +185,6 @@ def main():
         "deployment_id": deployment_id,
         "wxo_instance_url": wxo_url,
     }
-    # Update the file already in effect, so the wizard never writes to one
-    # place while every other script reads another.
-    target = C.active_config() or C.CONFIG_PATH
     target.parent.mkdir(parents=True, exist_ok=True)
     with open(target, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=2)

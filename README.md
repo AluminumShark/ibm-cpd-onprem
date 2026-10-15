@@ -112,7 +112,10 @@ Every setting resolves as **explicit arg → `CPD_*` env var → config file**, 
 vars always override any file (handy for CI or a second cluster). The config file
 itself is the first of these that exists:
 
-1. `$CPD_CONFIG` — an explicit path, for juggling several clusters.
+1. `$CPD_CONFIG` — an explicit path, for juggling several clusters. When set
+   it is the only file consulted, even before it exists: run `cpd_init.py`
+   with it set and the wizard creates that file instead of touching the
+   others.
 2. **`./config.json`** — in the checkout, beside `config.example.json`. Copy the
    example, fill it in, and the clone is self-contained.
 3. `~/.config/cpd-onprem/config.json` — what `cpd_init.py` writes by default,
