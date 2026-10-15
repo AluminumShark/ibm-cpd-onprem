@@ -265,6 +265,7 @@ ibm-cpd-onprem/
     ├── wx_chat.sh        # one-shot chat
     ├── wx_connect.py     # SDK read-only inventory
     ├── wxo_adk_check.py  # is the installed ADK compatible with this server?
+    ├── wxo_env_activate.py  # ADK `env add` + `env activate`, key from config/env
     ├── wxo_add_provider.py  # external-LLM credentials -> WXO connection
     ├── wxo_setup_agent.py   # native agent backed by an external LLM
     └── wxo_run_agent.py     # invoke an agent over the runs API
