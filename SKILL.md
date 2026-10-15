@@ -146,6 +146,10 @@ a transcript by accident.
 | Inventory/manage **watsonx.ai / WML** | `ibm_watsonx_ai` SDK | [references/watsonx-sdk.md](references/watsonx-sdk.md) |
 | Diagnose a weird error | — | [references/gotchas.md](references/gotchas.md) |
 
+For an external-LLM agent the provider and model are the user's choice: ask
+when they haven't named a model — the ids in the references are examples, not
+defaults.
+
 When the user is vague ("check the on-prem cluster", "what's on the cluster"),
 the fastest full picture is: `python "$S/scripts/wx_connect.py"` (SDK
 inventory) plus `uv run --project "$S" --group wxo orchestrate agents list`

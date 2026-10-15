@@ -249,8 +249,10 @@ uv run --project "$S" --group wxo python "$S/scripts/wxo_setup_agent.py" \
 ```
 It ensures the connection + credentials (`wxo_add_provider.py`, the only code that
 touches the plaintext key), imports the model and a native agent, and — with
-`--test` — invokes it. `--model` reaches the provider unchanged, so use an id
-it currently serves; the ids here were current in October 2026. Self-hosted example:
+`--test` — invokes it. `--provider` and `--model` are the user's choice: ask
+when they haven't named a model, rather than reusing the ids shown here —
+those are examples (current in October 2026), not defaults. `--model` reaches
+the provider unchanged, so it must be an id the provider currently serves. Self-hosted example:
 ```bash
 uv run --project "$S" --group wxo python "$S/scripts/wxo_setup_agent.py" \
     --provider ollama --model llama3.1 --agent-name zytest_ollama \
