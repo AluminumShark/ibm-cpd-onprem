@@ -33,9 +33,12 @@ LAST_PRE_WORKSPACE = "2.7.2"       # newest ADK verified against WXO 5.3.1
 MATRIX_URL = ("https://developer.watson-orchestrate.ibm.com/environment/"
               "onprem_compatibility")
 PROBE = "/v1/orchestrate/agents/external-chat?include=global"
-INSTALL = ("    uv sync --group wxo    # pinned in pyproject.toml, into this checkout's .venv\n"
+# --project names this checkout explicitly: the hint is read by someone whose
+# shell sits elsewhere, where a bare `uv sync --group wxo` hits the wrong project.
+INSTALL = ('    uv sync --project "%s" --group wxo    # pinned in pyproject.toml, '
+           "into the skill's own .venv\n"
            '    pip install "ibm-watsonx-orchestrate==%s"    # without uv'
-           % LAST_PRE_WORKSPACE)
+           % (C.REPO_ROOT, LAST_PRE_WORKSPACE))
 
 
 def parse_adk_version(text: str):

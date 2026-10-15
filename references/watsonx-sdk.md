@@ -2,13 +2,18 @@
 
 Package `ibm_watsonx_ai` (verified with v1.3.39). It connects to a CPD cluster and
 manages watsonx.ai + Watson Machine Learning: models, deployments, specs, prompt
-templates, training. `scripts/wx_connect.py` wires this to the shared config and
-prints a read-only inventory; the patterns below are what it uses.
+templates, training. `wx_connect.py` (`python "$S/scripts/wx_connect.py"`) wires
+this to the shared config and prints a read-only inventory; the patterns below
+are what it uses.
+
+Code below assumes `S` (shell) / `SKILL_DIR` (Python) holds this skill's base
+directory (see SKILL.md); the working directory is usually the user's project.
 
 ## Connection (the robust form)
 ```python
 import os, sys, urllib3; urllib3.disable_warnings()
-sys.path.insert(0, "scripts")
+SKILL_DIR = r"<this skill's base directory>"   # the same path as $S
+sys.path.insert(0, os.path.join(SKILL_DIR, "scripts"))
 import cpd_config as C
 from ibm_watsonx_ai import APIClient, Credentials
 

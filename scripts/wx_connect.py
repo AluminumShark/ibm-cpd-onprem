@@ -18,7 +18,7 @@ INSTALL_HINT = (
     "the ibm-watsonx-ai SDK is not installed — this script needs it "
     "(the token/chat scripts do not).\n"
     f"  install:  {PY} -m pip install ibm-watsonx-ai\n"
-    f"  then:     {PY} wx_connect.py\n"
+    f"  then:     {PY} \"{os.path.abspath(__file__)}\"\n"
     "Prefer no extra dependency? The same inventory is available over plain "
     "REST — see references/rest-api.md."
 )

@@ -2,6 +2,9 @@
 
 The non-obvious things that make calls fail on this stack, with the fix for each.
 
+Commands below assume `S` holds this skill's base directory, set in the same
+call (see SKILL.md); the shell usually sits in the user's project, not here.
+
 ## 1. `UnicodeEncodeError` on a non-English Windows console
 **Symptom:** a command dies mid-output with
 `UnicodeEncodeError: 'cp950' codec can't encode character '✨'...` (or similar
@@ -46,14 +49,28 @@ version. `wx_connect.py` auto-detects this via
 **Fix:** call `client.set.default_space(SPACE_ID)` (or `default_project`) right
 after connecting, before any catalog call.
 
-## 6. ADK `env remove` refuses / hangs
-- It **refuses to remove the active env** without an interactive `y`. Switch the
-  active env away first, or pipe `y`.
+## 6. ADK `env` commands prompt / hang
+- `env remove` **refuses to remove the active env** without an interactive `y`.
+  Switch the active env away first, or pipe `y`.
+- `env add` on a name that already exists asks `Would you like to update the
+  environment '<name>'? (Y/n)` via `input()`, which raises `EOFError` on a
+  non-interactive stdin. Re-run through `wxo_env_activate.py`, which answers it,
+  or pipe `y`.
+- `env activate` for a **CPD** env with an empty or missing `-a`/`-p` falls
+  back to `getpass` prompts for the key/password and **hangs** a non-interactive
+  shell. The usual cause is `-a "$CPD_API_KEY"` when the key lives in
+  `config.json`, not the environment. Use `wxo_env_activate.py`, which reads the
+  key through `cpd_config.py`.
 - `env activate` for a **cloud** env with no key drops into an interactive prompt
   and **hangs** on non-interactive stdin. Supply the key, or activate
   interactively.
 - `env activate local` needs the Developer Edition server running on
   `localhost:4321`, else connection refused.
+
+**Fix** for the CPD `env add` / `env activate` cases — let the helper do both:
+```bash
+uv run --project "$S" --group wxo python "$S/scripts/wxo_env_activate.py"   # [--name cpd-onprem]
+```
 
 ## 7. `cpdctl` panics on launch (non-English Windows)
 **Symptom:** `panic: open resources/all.zh_Hant.json: file does not exist` (or
@@ -111,10 +128,10 @@ IBM's [on-prem compatibility matrix](https://developer.watson-orchestrate.ibm.co
 names for your Software Hub release. The `wxo` dependency group in
 `pyproject.toml` already pins 2.7.2 into the project's `.venv`:
 ```bash
-uv sync --group wxo                                  # from the checkout; elsewhere add --project <dir>
-uv run --group wxo python scripts/wxo_adk_check.py   # -> [ok] ADK 2.7.2 predates workspaces
+uv sync --project "$S" --group wxo
+uv run --project "$S" --group wxo python "$S/scripts/wxo_adk_check.py"   # -> [ok] ADK 2.7.2 predates workspaces
 # without uv:
-pip install "ibm-watsonx-orchestrate==2.7.2" && python scripts/wxo_adk_check.py
+pip install "ibm-watsonx-orchestrate==2.7.2" && python "$S/scripts/wxo_adk_check.py"
 ```
 An upgrade can leave a cloud-oriented ADK on `PATH` without anyone noticing, so
 run the check whenever the Orchestrate path misbehaves after a `pip install`.

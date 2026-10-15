@@ -80,7 +80,7 @@ def test_workspace_adk_against_server_without_workspaces(monkeypatch):
     status, msg = chk.check()
     assert status == "incompatible"
     assert "2.18.1" in msg
-    assert "uv sync --group wxo" in msg
+    assert "uv sync --project" in msg and "--group wxo" in msg
     assert 'pip install "ibm-watsonx-orchestrate==2.7.2"' in msg
     assert seen and "/v1/orchestrate/agents/external-chat" in seen[0][1]
     assert "include=global" in seen[0][1]
@@ -105,7 +105,7 @@ def test_missing_cli_names_the_install_command(monkeypatch):
     _fake_adk(monkeypatch, None)
     status, msg = chk.check()
     assert status == "missing"
-    assert "uv sync --group wxo" in msg
+    assert "uv sync --project" in msg and "--group wxo" in msg
     assert "pip install" in msg
 
 

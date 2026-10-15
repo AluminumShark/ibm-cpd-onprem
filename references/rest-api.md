@@ -3,14 +3,17 @@
 All verified first-hand against a live cluster. On-prem clusters usually use a
 self-signed cert → every `curl` uses `-k` (drop it once a real CA is trusted, or
 swap it for `--cacert "$CPD_CA_BUNDLE"` with a private CA).
-Resolve `$CPD_URL` etc. from config: `python scripts/cpd_config.py get url`
-(`python3` on macOS/Linux).
+Resolve `$CPD_URL` etc. from config:
+`python "$S/scripts/cpd_config.py" get url` (`python3` on macOS/Linux).
+
+Commands below assume `S` holds this skill's base directory, set in the same
+call (see SKILL.md); the shell usually sits in the user's project, not here.
 
 ## 1. Get a bearer token (valid ~12h)
 ```bash
-TOKEN=$(bash scripts/cpd_token.sh)          # uses cpd_config.py
+TOKEN=$(bash "$S/scripts/cpd_token.sh")          # uses cpd_config.py
 AUTH="Authorization: Bearer $TOKEN"
-CPD_URL=$(python scripts/cpd_config.py get url)
+CPD_URL=$(python "$S/scripts/cpd_config.py" get url)
 ```
 Equivalent raw call:
 ```bash
@@ -23,7 +26,7 @@ A 200 looks like `{"_messageCode_":"200","message":"Success","token":"..."}`.
 
 ## 2. Chat with a deployed foundation model
 ```bash
-DEP=$(python scripts/cpd_config.py resolve-deployment)
+DEP=$(python "$S/scripts/cpd_config.py" resolve-deployment)
 curl -sk -m 180 -H "$AUTH" -H 'Content-Type: application/json' \
   "$CPD_URL/ml/v1/deployments/$DEP/text/chat?version=2024-05-01" \
   -d '{"messages":[{"role":"user","content":"Introduce yourself in one sentence."}]}'
@@ -54,13 +57,13 @@ curl -sk -H "$AUTH" "$CPD_URL/v2/spaces?limit=50"
 curl -sk -H "$AUTH" "$CPD_URL/v2/projects?limit=50"
 
 # Assets in a project (prompts, notebooks, flows, ...)
-PROJECT_ID=$(python scripts/cpd_config.py get project_id)
+PROJECT_ID=$(python "$S/scripts/cpd_config.py" get project_id)
 curl -sk -H "$AUTH" -X POST \
   "$CPD_URL/v2/asset_types/asset/search?project_id=$PROJECT_ID" \
   -H 'Content-Type: application/json' -d '{"query":"*:*","limit":100}'
 
 # WML deployments in a space
-SPACE_ID=$(python scripts/cpd_config.py get space_id)
+SPACE_ID=$(python "$S/scripts/cpd_config.py" get space_id)
 curl -sk -H "$AUTH" "$CPD_URL/ml/v4/deployments?space_id=$SPACE_ID&version=2024-05-01"
 
 # Foundation model specs available to this cluster

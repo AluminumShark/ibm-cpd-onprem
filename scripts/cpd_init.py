@@ -200,7 +200,10 @@ def main():
         var = "$env:CPD_API_KEY" if os.name == "nt" else "export CPD_API_KEY="
         print(f"\nAPI key not stored. Set it per shell, e.g.  {var}\"<key>\"")
     py = "python" if os.name == "nt" else "python3"
-    print(f"\nDone. Try:  {py} cpd_config.py show   |   bash wx_chat.sh \"hello\"")
+    here = os.path.dirname(os.path.abspath(__file__))
+    show = '%s "%s" show' % (py, os.path.join(here, "cpd_config.py"))
+    chat = 'bash "%s" "hello"' % os.path.join(here, "wx_chat.sh")
+    print(f"\nDone. Try:  {show}   |   {chat}")
 
 
 if __name__ == "__main__":

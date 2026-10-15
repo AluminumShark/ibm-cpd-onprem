@@ -5,30 +5,36 @@ through a full import→verify→remove cycle on a live CPD instance. Command su
 and flags below are from ADK 2.7.2 (the same loop also passed on 1.12.0, 2.3.4
 and 2.6.1); check `--help` if your version differs.
 
+Commands below assume `S` holds this skill's base directory, set in the same
+call (see SKILL.md); the shell usually sits in the user's project, not here.
+
 ## Install & verify the CLI first
-With uv (recommended) the ADK lives in this checkout's `.venv`, pinned by the
+With uv (recommended) the ADK lives in the skill folder's `.venv`, pinned by the
 `wxo` dependency group in `pyproject.toml` (Python 3.11–3.13, the ADK's own
 range), so it never collides with packages in the system Python:
 ```bash
-uv sync --group wxo                                  # once
-uv run --group wxo python scripts/wxo_adk_check.py   # installed AND compatible?
-uv run --group wxo orchestrate agents list           # prefix every ADK command
+uv sync --project "$S" --group wxo                                      # once
+uv run --project "$S" --group wxo python "$S/scripts/wxo_adk_check.py"  # installed AND compatible?
+uv run --project "$S" --group wxo orchestrate agents list               # prefix every ADK command
 ```
-`uv run --group wxo` puts `.venv`'s `orchestrate` first on `PATH`, for the CLI
-and for the `wxo_*` scripts that call it. The commands below are written bare —
-add the prefix, or activate `.venv`. Pinning a different ADK means editing the
-`wxo` group and re-running `uv sync --group wxo`.
+`uv run --project "$S" --group wxo` puts `.venv`'s `orchestrate` first on
+`PATH`, for the CLI and for the `wxo_*` scripts that call it. Pinning a
+different ADK means editing the `wxo` group and re-running
+`uv sync --project "$S" --group wxo`.
 
-These run from the checkout. From any other directory — which is the normal
-case when Claude uses this as a skill — add `--project <checkout or skill dir>`
-(`uv run --project "$S" --group wxo …`, with script paths under `$S` too).
-Without it uv finds no project, ignores `--group wxo` with only a warning, and
-runs whatever `orchestrate` is on `PATH`; `wxo_adk_check.py` run the same way
-will flag it if that one is too new.
+**`--project "$S"` is mandatory.** Without it uv finds no project (the shell is
+in the user's directory), ignores `--group wxo` with only a warning, and runs
+whatever `orchestrate` is on `PATH`; `wxo_adk_check.py` run the same way will
+flag it if that one is too new.
+
+> **Every bare `orchestrate …` below means
+> `uv run --project "$S" --group wxo orchestrate …`** (or a shell with
+> `$S/.venv` activated). Run truly bare it may pick up a newer ADK that fails on
+> this cluster.
 
 Without uv:
 ```bash
-python scripts/wxo_adk_check.py
+python "$S/scripts/wxo_adk_check.py"
 pip install "ibm-watsonx-orchestrate==2.7.2"   # only if the check says so
 ```
 `orchestrate: command not found` (PowerShell: `'orchestrate' is not recognized`)
@@ -72,12 +78,12 @@ avoids.
   `orchestrate evaluations` needs the extra.
 - **Cloud and on-prem on one machine.** An IBM Cloud (SaaS) instance wants the
   newest ADK, this cluster wants ≤ 2.7.2. The uv route already separates them:
-  the cluster's ADK sits in this checkout's `.venv` and wins on `PATH` inside
-  `uv run --group wxo`, so a newer `orchestrate` elsewhere (e.g. from
-  `uv tool install ibm-watsonx-orchestrate`) can serve the SaaS instance. With
-  pip only, give one of them its own virtualenv. The env list in
-  `~/.config/orchestrate` is shared, so `env activate` picks the target either
-  way.
+  the cluster's ADK sits in the skill folder's `.venv` and wins on `PATH`
+  inside `uv run --project "$S" --group wxo`, so a newer `orchestrate`
+  elsewhere (e.g. from `uv tool install ibm-watsonx-orchestrate`) can serve the
+  SaaS instance. With pip only, give one of them its own virtualenv. The env
+  list in `~/.config/orchestrate` is shared, so `env activate` picks the target
+  either way.
 
 ## ALWAYS export this first
 ```bash
@@ -100,12 +106,31 @@ Agent attributes: style ∈ `default | react | planner`; kind ∈
 
 ## Connect to the cluster
 ```bash
-WXO_URL=$(python scripts/cpd_config.py get wxo_instance_url)
-USER=$(python scripts/cpd_config.py get username)
+uv run --project "$S" --group wxo python "$S/scripts/wxo_env_activate.py"   # [--name cpd-onprem]
+```
+`wxo_env_activate.py` reads `wxo_instance_url`, `username` and the CPD API key
+through `cpd_config.py`, so it works whether the key is in `CPD_API_KEY` or
+stored in `config.json` by the wizard. It runs `env add -t cpd` (with
+`--insecure`, or `--verify <ca_bundle>` when TLS verification is on), answering
+the "update the environment? (Y/n)" prompt itself so re-runs work
+non-interactively, then `env activate … --skip-version-check`. It never prints
+the key: it is redacted in the echoed command and scrubbed from the output.
+
+Equivalent manual commands:
+```bash
+WXO_URL=$(python "$S/scripts/cpd_config.py" get wxo_instance_url)
+CPD_USER=$(python "$S/scripts/cpd_config.py" get username)
 
 orchestrate env add -n cpd-onprem -u "$WXO_URL" -t cpd --insecure
-orchestrate env activate cpd-onprem -u "$USER" -a "$CPD_API_KEY" --skip-version-check
+orchestrate env activate cpd-onprem -u "$CPD_USER" -a "$CPD_API_KEY" --skip-version-check
 ```
+- `CPD_USER`, not `USER`: assigning `USER` clobbers the shell's own `$USER`.
+- `-a "$CPD_API_KEY"` only works when the key is in the environment. A key
+  stored in `config.json` is not (and `cpd_config.py get api_key` refuses
+  without `--reveal`); an empty `-a` makes the ADK fall back to `getpass`
+  prompts that hang a non-interactive shell. Re-running `env add` on an
+  existing name prompts too and dies with `EOFError` — see
+  [gotchas #6](gotchas.md#6-adk-env-commands-prompt--hang). Use the helper.
 - `-t cpd` selects CPD auth; `--insecure` accepts the self-signed cert.
 - `env activate` takes a CPD **password OR api key**, not both.
 - `--skip-version-check` avoids a pypi lookup that can hang or mismatch.
@@ -218,19 +243,25 @@ also names a provider's required fields in its output. Secrets are supplied via
 ```bash
 export PYTHONIOENCODING=utf-8 PYTHONUTF8=1
 # put WXO_<PROVIDER>_API_KEY in providers.env (chmod 600) or the environment first
-python scripts/wxo_setup_agent.py --provider anthropic \
-    --model claude-3-5-sonnet-20241022 --agent-name zytest_claude \
-    --test "Reply with exactly: PONG"
+uv run --project "$S" --group wxo python "$S/scripts/wxo_setup_agent.py" \
+    --provider anthropic --model claude-3-5-sonnet-20241022 \
+    --agent-name zytest_claude --test "Reply with exactly: PONG"
 ```
 It ensures the connection + credentials (`wxo_add_provider.py`, the only code that
 touches the plaintext key), imports the model and a native agent, and — with
 `--test` — invokes it. Self-hosted example:
 ```bash
-python scripts/wxo_setup_agent.py --provider ollama --model llama3.1 \
-    --agent-name zytest_ollama --provider-config custom_host=http://ollama:11434/v1
+uv run --project "$S" --group wxo python "$S/scripts/wxo_setup_agent.py" \
+    --provider ollama --model llama3.1 --agent-name zytest_ollama \
+    --provider-config custom_host=http://ollama:11434/v1
 ```
+`wxo_add_provider.py --provider <name>` (credentials only) takes the same
+prefix. Without uv, run either as `python "$S/scripts/wxo_setup_agent.py" …`
+with the pinned ADK pip-installed.
 
 ### Equivalent manual commands
+Reference only: Claude uses `wxo_setup_agent.py` / `wxo_add_provider.py`, and
+never sources or reads `providers.env` to make the manual form below work.
 ```bash
 # 1. credentials: a key_value connection (secret rides on argv — see note below)
 orchestrate connections add -a wxo_anthropic
@@ -268,7 +299,7 @@ The gateway's raw OpenAI endpoint
 `POST {wxo}/v1/orchestrate/v1/chat/completions` returns **HTTP 500** on this
 cluster — use the **runs** path instead:
 ```bash
-python scripts/wxo_run_agent.py --agent zytest_claude --message "Reply with: PONG"
+python "$S/scripts/wxo_run_agent.py" --agent zytest_claude --message "Reply with: PONG"
 ```
 Under the hood: resolve `GET {wxo}/v1/orchestrate/agents` (a JSON array, each with
 `id`/`name`/`llm`) → `POST {wxo}/v1/orchestrate/runs` with
@@ -278,8 +309,9 @@ take the last `role == "assistant"` message's text parts.
 
 ### Cleanup (reverse order)
 ```bash
-python scripts/wxo_setup_agent.py --provider anthropic \
-    --model claude-3-5-sonnet-20241022 --agent-name zytest_claude --cleanup
+uv run --project "$S" --group wxo python "$S/scripts/wxo_setup_agent.py" \
+    --provider anthropic --model claude-3-5-sonnet-20241022 \
+    --agent-name zytest_claude --cleanup
 # equivalently, by hand — agent depends on the model, remove it first:
 orchestrate agents remove -n zytest_claude -k native
 orchestrate models remove -n virtual-model/anthropic/claude-3-5-sonnet-20241022
