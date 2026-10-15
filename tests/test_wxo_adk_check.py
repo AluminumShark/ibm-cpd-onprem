@@ -101,6 +101,21 @@ def test_unexpected_probe_status_is_unknown_not_blocking(monkeypatch):
     assert "403" in msg
 
 
+@pytest.mark.parametrize("broken", ["get_token", "http"])
+def test_an_unreachable_server_is_unknown_not_fatal(monkeypatch, broken):
+    """cpd_config exits on a missing key or an unreachable host; the check
+    promises to warn, not block, when it cannot verify."""
+    _fake_adk(monkeypatch, "2.18.1")
+    _fake_server(monkeypatch, 200)
+
+    def exits(*a, **k):
+        raise SystemExit("cannot reach https://cpd.example: timed out")
+    monkeypatch.setattr(C, broken, exits)
+    status, msg = chk.check()
+    assert status == "unknown"
+    assert "cannot reach" in msg
+
+
 def test_missing_cli_names_the_install_command(monkeypatch):
     _fake_adk(monkeypatch, None)
     status, msg = chk.check()

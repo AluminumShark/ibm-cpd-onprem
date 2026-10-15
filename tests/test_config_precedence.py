@@ -71,3 +71,11 @@ class TestExplicitConfigNotYetCreated:
             self, cluster1, monkeypatch):
         monkeypatch.delenv("CPD_CONFIG")
         assert C.write_target() == C.USER_CONFIG
+
+
+def test_cpd_version_env_overrides_the_config(config_file, monkeypatch):
+    """wx_connect.py read the file first, the reverse of every other setting."""
+    config_file(url="https://x", cpd_version="5.2")
+    assert C.get("cpd_version") == "5.2"
+    monkeypatch.setenv("CPD_VERSION", "5.3")
+    assert C.get("cpd_version") == "5.3"

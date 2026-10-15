@@ -24,7 +24,7 @@ TOKEN=$("$PY" "$HERE/cpd_config.py" token)
 DEP="${2:-$("$PY" "$HERE/cpd_config.py" resolve-deployment)}"
 VERIFY=$("$PY" "$HERE/cpd_config.py" get verify_ssl)
 
-CURL=(-s -m 180)   # an array, so a CA bundle path with spaces stays one argument
+CURL=(-sS -m 180)  # -S: show curl's error, not a silent set -e exit; array keeps a CA path with spaces one argument
 case "$VERIFY" in
   True|true|1)     # verify, against the private CA bundle when one is configured
     CA=$("$PY" "$HERE/cpd_config.py" get ca_bundle)

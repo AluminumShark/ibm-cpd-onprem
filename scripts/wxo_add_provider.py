@@ -169,8 +169,10 @@ def _run(cmd, redact=False):
 
 
 def _looks_present(proc) -> bool:
+    """A 409 on `connections add` reads "... already exists ..."; a bare "exist"
+    would also match the "does not exist" details other failures pass through."""
     out = ((proc.stdout or "") + (proc.stderr or "")).lower()
-    return "exist" in out or "already" in out
+    return "already exist" in out
 
 
 def add_provider(provider, connection=None, env="draft", scope="team",

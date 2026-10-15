@@ -185,3 +185,17 @@ def test_content_text_handles_parts_and_plain_string():
         [{"response_type": "text", "text": "a"},
          {"response_type": "text", "text": "b"}]) == "a\nb"
     assert runner._content_text([]) is None
+
+
+# --- "already exists" detection ---------------------------------------------
+
+@pytest.mark.parametrize("text,present", [
+    # ADK 2.7.2's own wording for a 409 on `connections add`
+    ("Failed to create connection. A connection with the App ID 'wxo_x' already "
+     "exists. Please select a different App ID or delete the existing resource.", True),
+    # server `detail` strings the ADK passes through on other failures
+    ("Environment 'cpd-onprem' does not exist", False),
+    ("The requested resource does not exist.", False),
+])
+def test_only_an_already_exists_error_counts_as_present(text, present):
+    assert prov._looks_present(_FakeProc(returncode=1, stderr=text)) is present

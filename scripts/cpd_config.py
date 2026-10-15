@@ -52,6 +52,7 @@ ENV = {
     "deployment_id": "CPD_DEPLOYMENT_ID",
     "wxo_instance_url": "CPD_WXO_INSTANCE_URL",
     "ca_bundle": "CPD_CA_BUNDLE",
+    "cpd_version": "CPD_VERSION",      # product version the SDK sends (wx_connect.py)
 }
 
 _warned = set()

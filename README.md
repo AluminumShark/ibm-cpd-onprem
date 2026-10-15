@@ -139,6 +139,7 @@ provider secret never has to sit beside your cluster config.
 | WXO instance URL | `CPD_WXO_INSTANCE_URL` | for the ADK |
 | verify TLS | `CPD_VERIFY_SSL` | default off (self-signed); a warning is printed while off |
 | CA bundle | `CPD_CA_BUNDLE` | PEM to verify against, for a cluster with a private CA |
+| SDK product version | `CPD_VERSION` | optional; `wx_connect.py` falls back to the SDK's newest when unset or unsupported |
 
 **Signing in to the web console** (where you generate the API key): on a cluster
 fronted by OpenShift, the login page asks for an identity provider first. Pick

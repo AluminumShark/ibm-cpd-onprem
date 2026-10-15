@@ -110,3 +110,9 @@ def test_chat_skips_verification_and_the_bundle_when_off(config_file, tmp_path, 
     config_file(url="https://cluster.invalid", verify_ssl=False, ca_bundle="unused.pem")
     args = _curl_args(tmp_path, bin_dir)
     assert "-k" in args and "--cacert" not in args
+
+
+def test_chat_shows_curl_errors_rather_than_exiting_silently(config_file, tmp_path, bin_dir):
+    """Under set -e a failing `curl -s` ends the script with no message."""
+    config_file(url="https://cluster.invalid")
+    assert "-sS" in _curl_args(tmp_path, bin_dir)

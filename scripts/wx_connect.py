@@ -73,7 +73,7 @@ def main():
         if not val:
             sys.exit(f"missing {name} — run cpd_init.py or set the env var")
 
-    version = pick_supported_version(C.get("cpd_version") or os.environ.get("CPD_VERSION"))
+    version = pick_supported_version(C.get("cpd_version"))
     verify = C.get("verify_ssl")
 
     creds = Credentials(url=url, username=username, api_key=api_key,

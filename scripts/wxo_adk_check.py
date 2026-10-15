@@ -74,7 +74,11 @@ def check(orchestrate="orchestrate", cfg=None):
     if not base:
         return "unknown", ("no wxo_instance_url — cannot verify ADK %s against "
                            "the server (run cpd_init.py)." % shown)
-    code, _ = C.http("GET", base + PROBE, token=C.get_token(cfg), cfg=cfg)
+    try:
+        code, _ = C.http("GET", base + PROBE, token=C.get_token(cfg), cfg=cfg)
+    except SystemExit as e:        # cpd_config exits on a missing key / dead host
+        return "unknown", ("ADK %s: could not probe the server (%s); could not "
+                           "verify. See %s" % (shown, e.code, MATRIX_URL))
     if code == 200:
         return "ok", "ADK %s; server supports workspaces." % shown
     if code == 500:
